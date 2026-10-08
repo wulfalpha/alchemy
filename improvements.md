@@ -103,9 +103,9 @@ The rules layer is solid. Over 300 seeded games of random play, no invariant bro
 
 ## Packaging, docs, and UX
 - **PyPI name: resolved.** `alchemy` on PyPI belongs to catalyst-team (an unrelated experiment-logging library, versions 20.4 and 20.5), so the distribution name is now `alchemy-game`, which was free on PyPI as of 2026-10-08. PyPI does not reserve names, so it is only claimed once a first release is uploaded. The `alchemy` import and command names are unchanged.
-- **There's no LICENSE file.** Add one for the code and the generated symbol art.
+- **License: resolved.** The project is MIT-licensed. `LICENSE` reads "Copyright (c) 2026 Andrew Davidson". `pyproject.toml` uses the PEP 639 fields `license = "MIT"` and `license-files = ["LICENSE"]`, which uv_build 0.12.23 supports: the built wheel has `License-Expression: MIT` and ships `LICENSE`. The license covers the code and the generated symbol art.
 - **`img/AoA_symbols.pdf`** is a third-party-looking reference (an Adobe InDesign 2015 export). The README already says rights haven't been reviewed. Since the repo is public, consider removing it, or confirm you're allowed to redistribute it.
-- **No CI and no test runner config.** Add a GitHub Actions workflow that runs the unit tests and the headless smoke test with `SDL_VIDEODRIVER=dummy`, plus a `[dependency-groups] dev = ["pytest"]` and `[tool.pytest.ini_options] pythonpath = ["src"]`, so plain `pytest` works without `PYTHONPATH`.
+- **CI: resolved.** `.github/workflows/ci.yml` runs the full pytest suite and a headless smoke test on Ubuntu with Python 3.12 and 3.13, on every push and PR to `main`. Plain `pytest` already works without `PYTHONPATH`, because `tests/conftest.py` adds `src/`. Still optional: a `[dependency-groups] dev = ["pytest"]` entry, so `--with pytest` isn't needed.
 - **The sdist leaves out `tests/`, `tools/`, and `sounds/README.md`.** Include tests if you want downstream packagers to run them.
 - **README:** document the exact scoring formula once bug 1 is settled, with a worked example. Say that R with `--seed` repeats the same board. Mention that the window is a fixed 1040×780 (a resizable or scaled window would help on small laptop screens).
 - **UX ideas:** cycle through hints, animate falling tiles, add keyboard or arrow-key play for accessibility, and show a "no more hints" or "game over" message when H is pressed after game over.
@@ -116,6 +116,32 @@ The rules layer is solid. Over 300 seeded games of random play, no invariant bro
 3. Validate `--screenshot` early, and catch `set_mode` failures, so no user-facing tracebacks remain.
 4. Add `Game.hint()` and make `resolve()` always return a list.
    - After each of fixes 1–4, remove the matching `xfail` marker in `tests/edge/`.
-5. Add CI (unit tests, headless smoke test, wheel install test) and a LICENSE. Review whether to keep `AoA_symbols.pdf`.
-6. When the project is ready to distribute, publish under `alchemy-game` (renamed from `alchemy`, which belongs to catalyst-team).
+5. ~~Add CI and a LICENSE~~ (done). Still to do: review whether to keep `AoA_symbols.pdf` in the public repo. It isn't shipped in the sdist or wheel. Optionally add a wheel-install test to CI.
+6. Release 0.1.0 as `alchemy-game` once you've done the one-time PyPI setup under "Releasing" below. The PyPI name item is resolved: `alchemy` belongs to catalyst-team.
 7. Refactor `app.main()` into testable pieces, then add UI-logic tests.
+
+## Releasing
+
+Packaging is ready for 0.1.0. The distribution name is `alchemy-game`; the import and the `alchemy` command are unchanged. Releases go out through `.github/workflows/publish.yml` using PyPI **Trusted Publishing** (OIDC), so no API token is stored anywhere.
+
+**One-time setup (do this yourself, in a browser):**
+1. Create a PyPI account at https://pypi.org/account/register/ and turn on two-factor authentication. PyPI requires 2FA to publish.
+2. Go to https://pypi.org/manage/account/publishing/ and, under "Add a new pending publisher", choose the GitHub tab and enter:
+   - PyPI Project Name: `alchemy-game`
+   - Owner: `wulfalpha`
+   - Repository name: `alchemy`
+   - Workflow name: `publish.yml`
+   - Environment name: `pypi`
+
+   A pending publisher doesn't reserve the name. `alchemy-game` is claimed only when the first upload succeeds. It was free on PyPI and TestPyPI as of 2026-10-08.
+3. Optional: in the GitHub repo, go to Settings → Environments → New environment and create `pypi`. You can add yourself as a required reviewer so each publish waits for your approval. If you skip this, the workflow creates the environment automatically the first time it runs.
+4. Optional dry run on TestPyPI: create an account at https://test.pypi.org (it's separate from PyPI) and add the same pending publisher at https://test.pypi.org/manage/account/publishing/. The workflow only targets real PyPI. To publish to TestPyPI, add a second job (or a temporary edit) with `repository-url: https://test.pypi.org/legacy/` on `pypa/gh-action-pypi-publish` and a matching environment name, such as `testpypi`.
+
+**Each release:**
+1. Bump `version` in `pyproject.toml` if needed (it's `0.1.0` now) and commit to `main`. Make sure CI is green.
+2. Tag and push: `git tag v0.1.0 && git push origin v0.1.0`
+3. The workflow runs the tests, checks that the tag matches the project version, builds the sdist and wheel with `uv build --no-sources`, and publishes them. Watch it under the repo's Actions tab.
+
+**Notes:**
+- PyPI never lets you re-upload the same version. If something is wrong, bump the version and tag again.
+- uv_build 0.12+ always puts a `pyproject.toml.orig` in the sdist, next to a TOML-1.0-normalized `pyproject.toml`. That's expected backend behaviour (astral-sh/uv#18741), not a stray file.

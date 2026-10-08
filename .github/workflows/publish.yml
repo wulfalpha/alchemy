@@ -1,0 +1,66 @@
+name: Publish to PyPI
+
+# Runs when a version tag is pushed, e.g. `git tag v0.1.0 && git push origin v0.1.0`.
+# Uses PyPI Trusted Publishing (OIDC): no API token is stored in the repo.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  SDL_VIDEODRIVER: dummy
+  SDL_AUDIODRIVER: dummy
+  PYGAME_HIDE_SUPPORT_PROMPT: "1"
+
+jobs:
+  test:
+    name: Tests before release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          python-version: "3.12"
+      - run: uv run --locked --with pytest pytest -q
+
+  build:
+    name: Build distributions
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          python-version: "3.12"
+      - name: Check tag matches project version
+        run: |
+          version="$(uv version --short)"
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match project version ${version} (expected v${version})"
+            exit 1
+          fi
+      - name: Build sdist and wheel
+        run: uv build --no-sources
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/alchemy-game/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
