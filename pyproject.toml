@@ -1,6 +1,6 @@
 [project]
 name = "alchemy-game"
-version = "0.1.0"
+version = "0.1.1"
 description = "An alchemical match-four puzzle game built with Pygame"
 readme = "README.md"
 authors = [

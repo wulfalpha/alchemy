@@ -185,21 +185,19 @@ def test_attempt_rejected_while_pending_and_after_game_over():
     assert game.attempt(a, b) is False
 
 
-def test_attempt_with_float_coords_raises_typeerror():
-    """Documents current behaviour: non-int coords pass validation then crash in swap()."""
+def test_attempt_with_float_coords_is_rejected():
+    """Non-integer coordinates are rejected without modifying the board."""
     game = Game(1)
-    with pytest.raises(TypeError):
-        game.attempt((0.5, 0), (1.5, 0))
+    assert game.attempt((0.5, 0), (1.5, 0)) is False
 
 
-def test_resolve_without_pending_returns_none():
-    """Documents API inconsistency: resolve() returns None instead of []."""
-    assert Game(1).resolve() is None
+def test_resolve_without_pending_returns_empty_list():
+    """An idle resolution always returns an iterable event list."""
+    assert Game(1).resolve() == []
 
 
 # ---------- scoring ----------
 
-@pytest.mark.xfail(strict=True, reason='beyond-four bonus applied across separate lines, see improvements.md')
 def test_two_separate_fours_get_beyond_four_bonus():
     """README: '25 per cleared symbol, plus 25 for each symbol beyond four'.
     Two independent 4-runs cleared together (8 tiles) get +100 'beyond four' bonus,
@@ -215,7 +213,6 @@ def test_two_separate_fours_get_beyond_four_bonus():
     assert game.score == 8 * 25, f'score {game.score}'
 
 
-@pytest.mark.xfail(strict=True, reason='beyond-four bonus applied across separate lines, see improvements.md')
 def test_reachable_two_line_swap_from_real_move():
     """Construct a single swap that completes two separate 4-lines (one horizontal, one vertical,
     not crossing). Shows the bonus can trigger from a normal player move."""
@@ -237,7 +234,7 @@ def test_reachable_two_line_swap_from_real_move():
 
 
 def test_cross_score_matches_readme_example():
-    # 5x5 true plus centred at (2,2): 9 tiles -> 9*25 + 5*25 + 200 = 550
+    # 5x5 plus: 9 unique tiles + two long-line bonuses + one plus = 475
     game = Game(1)
     game.grid = checker()
     for i in range(5):
@@ -245,7 +242,7 @@ def test_cross_score_matches_readme_example():
         game.grid[i][2] = 9
     game.pending = matches(game.grid)
     events = game.resolve()
-    assert game.score == 550
+    assert game.score == 475
     assert 'plus' in events and 'match' in events
 
 

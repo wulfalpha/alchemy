@@ -6,14 +6,18 @@ KINDS = 5
 PLUS_BONUS = 200
 
 
-def matches(grid):
-    found = set()
+def matched_runs(grid):
+    """Return each maximal horizontal or vertical match exactly once."""
+    runs = []
     for y in range(SIZE):
         for x in range(SIZE):
             value = grid[y][x]
             if value is None:
                 continue
             for dx, dy in ((1, 0), (0, 1)):
+                px, py = x - dx, y - dy
+                if px >= 0 and py >= 0 and grid[py][px] == value:
+                    continue
                 run = []
                 xx, yy = x, y
                 while xx < SIZE and yy < SIZE and grid[yy][xx] == value:
@@ -21,8 +25,12 @@ def matches(grid):
                     xx += dx
                     yy += dy
                 if len(run) >= 4:
-                    found.update(run)
-    return found
+                    runs.append(run)
+    return runs
+
+
+def matches(grid):
+    return {cell for run in matched_runs(grid) for cell in run}
 
 
 def plus_centers(grid):
@@ -90,11 +98,15 @@ class Game:
         self.score = 0
         self.moves = 30
         self.chain = 0
+        self.last_reaction = None
+        self.hint_index = 0
         self.pending = set()
         self.message = 'Select a symbol, then an adjacent symbol.'
 
     def attempt(self, a, b):
         if self.pending or self.moves <= 0:
+            return False
+        if any(not isinstance(v, int) for cell in (a, b) for v in cell):
             return False
         if any(not (0 <= x < SIZE and 0 <= y < SIZE) for x, y in (a, b)):
             return False
@@ -110,14 +122,29 @@ class Game:
         self.chain = 0
         return True
 
+    def hint(self):
+        if self.pending or self.moves <= 0:
+            return None
+        options = legal_moves(self.grid)
+        if not options:
+            self.message = 'No available swaps.'
+            return None
+        result = options[self.hint_index % len(options)]
+        self.hint_index += 1
+        return result
+
     def resolve(self):
         if not self.pending:
-            return
+            return []
         self.chain += 1
         count = len(self.pending)
         pluses = len(plus_centers(self.grid) & self.pending)
         bonus = pluses * PLUS_BONUS
-        points = (count * 25 + max(0, count - 4) * 25 + bonus) * self.chain
+        length_bonus = sum((len(run) - 4) * 25 for run in matched_runs(self.grid))
+        points = (count * 25 + length_bonus + bonus) * self.chain
+        self.last_reaction = dict(base=count * 25, length=length_bonus, plus=bonus,
+                                  multiplier=self.chain, total=points)
+        self.hint_index = 0
         events = ["cascade" if self.chain > 1 else "match"]
         if pluses:
             events.append("plus")

@@ -54,16 +54,15 @@ def test_screenshot_formats(tmp_path):
         assert (tmp_path / name).stat().st_size > 0
 
 
-def test_screenshot_without_extension_is_not_png(tmp_path):
+def test_screenshot_without_extension_defaults_to_png(tmp_path):
     out = tmp_path / 'shot'
     r = run('--smoke-test', '--screenshot', str(out))
     assert r.returncode == 0
-    head = out.read_bytes()[:8]
+    head = out.with_suffix('.png').read_bytes()[:8]
     print('extensionless screenshot header:', head)
-    assert head != b'\x89PNG\r\n\x1a\n'  # documents: saved as TGA despite help saying PNG
+    assert head == b'\x89PNG\r\n\x1a\n'  # extensionless paths default to PNG
 
 
-@pytest.mark.xfail(strict=True, reason='--screenshot into missing dir shows traceback, see improvements.md')
 def test_screenshot_into_missing_dir_gives_clean_error(tmp_path):
     r = run('--smoke-test', '--screenshot', str(tmp_path / 'nope' / 'x.png'))
     print(r.returncode, r.stderr[-300:])
@@ -80,7 +79,6 @@ def test_same_seed_same_screenshot_across_hash_seeds(tmp_path):
     assert shots[0] == shots[1] == shots[2]
 
 
-@pytest.mark.xfail(strict=True, reason='no display shows raw traceback, see improvements.md')
 def test_no_video_device_gives_clean_error():
     env = dict(ENV, SDL_VIDEODRIVER='nonexistent-driver')
     env.pop('DISPLAY', None); env.pop('WAYLAND_DISPLAY', None)
@@ -117,7 +115,6 @@ def test_missing_img_dir_falls_back(repo_copy):
     assert run_copy(repo_copy, '--smoke-test').returncode == 0
 
 
-@pytest.mark.xfail(strict=True, reason='bad custom image crashes instead of falling back, see improvements.md')
 def test_corrupt_custom_image_falls_back(repo_copy):
     (repo_copy / 'img' / 'fire.png').write_bytes(b'not a png')
     r = run_copy(repo_copy, '--smoke-test')
@@ -125,14 +122,12 @@ def test_corrupt_custom_image_falls_back(repo_copy):
     assert r.returncode == 0, 'corrupt custom PNG crashes startup instead of using packaged fallback'
 
 
-@pytest.mark.xfail(strict=True, reason='bad custom image crashes instead of falling back, see improvements.md')
 def test_empty_custom_image_falls_back(repo_copy):
     (repo_copy / 'img' / 'water.png').write_bytes(b'')
     r = run_copy(repo_copy, '--smoke-test')
     assert r.returncode == 0, 'zero-byte custom PNG crashes startup'
 
 
-@pytest.mark.xfail(strict=True, reason='bad custom image crashes instead of falling back, see improvements.md')
 def test_directory_named_like_image_falls_back(repo_copy):
     (repo_copy / 'img' / 'air.png').unlink()
     (repo_copy / 'img' / 'air.png').mkdir()
@@ -269,20 +264,7 @@ def test_clicks_on_tile_gaps_and_board_edges():
     drive(script)
 
 
-def test_hint_is_always_the_same_move():
-    hints = []
-    from alchemy.board import legal_moves
 
-    def script(frame, st):
-        if frame <= 3:
-            hints.append(legal_moves(st['games'][-1].grid)[0])
-            return [key(pygame.K_h)]
-        return [pygame.event.Event(pygame.QUIT)]
-    drive(script)
-    assert len(set(hints)) == 1
-
-
-@pytest.mark.xfail(strict=True, raises=IndexError, reason='hint on a dead board raises IndexError (possible bug), see improvements.md')
 def test_hint_on_dead_board_does_not_crash():
     """Possible bug: app.py:72/80 index legal_moves()[0] without a guard (unreachable today)."""
     def script(frame, st):

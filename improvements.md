@@ -1,5 +1,10 @@
 # alchemy — review and improvements
 
+## Implementation update
+
+The original review below is retained as historical context. The current working version fixes per-line scoring, custom-image fallback, screenshot and display errors, safe cycling hints, consistent resolve results, coordinate/volume validation, import guards, and safe artwork regeneration. It adds resizable rendering, reaction score breakdowns, explicit artwork overrides, case-insensitive sound extensions, and cross-platform installed-wheel CI. Solid blocks intentionally retain all qualifying plus bonuses; seeded restarts intentionally repeat the experiment. Version 0.1.0 has already been published; a new release needs a new version. Local scoreboards and limited-reactant difficulty remain future work.
+
+
 Reviewed commit `6185a9c` ("Add playable Pygame match-four alchemy game") on `main`, 2026-10-08. I used Python 3.12.15 and pygame 2.6.1 (SDL 2.28.4) with SDL dummy video/audio drivers.
 
 ## Summary

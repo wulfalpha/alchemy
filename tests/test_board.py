@@ -35,7 +35,7 @@ class BoardTests(unittest.TestCase):
             self.assertEqual(len(game.pending), 7)
             game.chain = chain
             events = game.resolve()
-            self.assertEqual(game.score, (175 + 75 + 200) * (chain + 1))
+            self.assertEqual(game.score, (175 + 200) * (chain + 1))
             self.assertIn('plus', events)
 
     def test_short_arm_and_t_shape_do_not_earn_bonus(self):

@@ -16,11 +16,12 @@ env:
 
 jobs:
   test:
-    name: Tests (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v7
@@ -32,3 +33,7 @@ jobs:
         run: uv run --locked --with pytest pytest -q
       - name: Headless smoke test
         run: uv run --locked alchemy --smoke-test --seed 42
+      - name: Build and test installed wheel
+        run: |
+          uv build
+          uv run python tools/check_wheel.py

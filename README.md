@@ -37,7 +37,7 @@ Or install into your Python environment with `python -m pip install -e .`, then 
 - Match **four or more** identical symbols horizontally or vertically. Diagonals and groups without a four-symbol line do not clear.
 - Valid swaps use one of your 30 moves. Invalid swaps are reversed for free.
 - Cleared tiles refill from above; further matches produce cascades.
-- Each cleared symbol earns 25 points, with another 25 for each symbol beyond four. The total is multiplied by the cascade number. Intersections count each tile once. A true plus adds **200 points per crossing**, before the cascade multiplier: both horizontal and vertical runs must be 4+ symbols and extend on both sides of the crossing. T and L shapes do not earn this bonus.
+- Each cleared symbol earns 25 points, with another 25 for each symbol beyond four **in each horizontal or vertical matched line**. A maximal line is scored only once. The total is multiplied by the cascade number. Intersections count each tile once. A true plus adds **200 points per crossing**, before the cascade multiplier: both horizontal and vertical runs must be 4+ symbols and extend on both sides of the crossing. T and L shapes do not earn this bonus.
 - **H** or **Hint** highlights a valid swap, without a penalty.
 - **R** or **New game** restarts. **Esc** quits.
 - Boards with no valid swaps are replaced automatically for free; the score and remaining moves carry over.
@@ -76,3 +76,17 @@ Use `alchemy --seed 42` for a reproducible game. This first version has session 
 ## License
 
 Released under the [MIT License](https://github.com/wulfalpha/alchemy/blob/main/LICENSE). Copyright (c) 2026 Andrew Davidson.
+
+## Reliability and reaction feedback
+
+The window is resizable: the board keeps its proportions, and mouse controls scale with it. The reaction panel shows base points, longer-line points, plus points, and the cascade multiplier for the latest reaction.
+
+Scoring is `(25 × unique cleared tiles + 25 × sum of each line's length beyond 4 + 200 × plus crossings) × cascade number`. A four scores 100, a five 150, and a six 200. Two separate fours score 200; two crossing fours score 375 if they form a true plus. Multiple qualifying crossings, including those in solid blocks, each receive the plus bonus. Diagonals never count.
+
+Hints cycle through valid swaps without changing future tiles. With `--seed`, restarting intentionally repeats the same experiment.
+
+Use `--assets-dir /path/to/images` for custom PNGs in installed copies. Invalid custom art falls back to packaged symbols with a warning. `--screenshot` supports PNG, JPG, and BMP; extensionless paths get `.png`. The output directory must already exist.
+
+Regenerating existing artwork requires `python tools/draw_symbols.py --force`. This overwrites both custom and packaged defaults.
+
+Run the full regression suite with `uv run --with pytest pytest -q`.

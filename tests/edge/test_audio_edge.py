@@ -23,11 +23,11 @@ def write_wav(path, frames=2205):
         clip.writeframes(b'\x00\x00' * frames)
 
 
-def test_nonexistent_sound_dir_is_silent_and_no_warning(tmp_path, caplog):
+def test_nonexistent_sound_dir_warns(tmp_path, caplog):
     with caplog.at_level(logging.WARNING):
         audio = Audio(tmp_path / 'does-not-exist')
     assert audio.sounds == {}
-    assert not caplog.records  # documents: user typo in --sound-dir gets no feedback
+    assert caplog.records
 
 
 def test_sound_dir_is_a_file(tmp_path):
@@ -66,9 +66,9 @@ def test_empty_and_zero_frame_files(tmp_path):
     assert 'select' not in a.sounds  # skipped with warning, no crash
 
 
-def test_uppercase_extension_not_found(tmp_path):
+def test_uppercase_extension_loads(tmp_path):
     write_wav(tmp_path / 'match.WAV')
-    assert 'match' not in Audio(tmp_path).sounds  # documents case-sensitivity
+    assert 'match' in Audio(tmp_path).sounds
 
 
 def test_directory_named_like_sound(tmp_path):
@@ -84,15 +84,13 @@ def test_volume_clamped(tmp_path, vol, expected):
 
 def test_nan_volume_via_api(tmp_path):
     write_wav(tmp_path / 'match.wav')
-    a = Audio(tmp_path, volume=float('nan'))
-    v = a.sounds['match'].get_volume()
-    print('nan volume ->', v)
+    with pytest.raises(ValueError):
+        Audio(tmp_path, volume=float('nan'))
 
 
-def test_string_volume_via_api_raises_typeerror(tmp_path):
+def test_numeric_string_volume_is_accepted(tmp_path):
     write_wav(tmp_path / 'match.wav')
-    with pytest.raises(TypeError):
-        Audio(tmp_path, volume='0.5')
+    assert Audio(tmp_path, volume='0.5').sounds['match'].get_volume() == 0.5
 
 
 def test_mute_start_and_toggle_without_mixer(tmp_path):
