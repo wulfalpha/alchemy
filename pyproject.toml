@@ -1,0 +1,17 @@
+[project]
+name = "alchemy"
+version = "0.1.0"
+description = "An alchemical match-four puzzle game built with Pygame"
+readme = "README.md"
+authors = [
+    { name = "Andrew Davidson", email = "drace.davidson@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = ["pygame>=2.6.1,<3"]
+
+[project.scripts]
+alchemy = "alchemy:main"
+
+[build-system]
+requires = ["uv_build>=0.12.23,<0.13.0"]
+build-backend = "uv_build"
