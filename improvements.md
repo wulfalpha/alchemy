@@ -102,7 +102,7 @@ The rules layer is solid. Over 300 seeded games of random play, no invariant bro
 8. **`tools/draw_symbols.py`:** it runs in a temp copy without `img/` and gives pixel-identical output.
 
 ## Packaging, docs, and UX
-- **The PyPI name `alchemy` belongs to someone else.** It's owned by catalyst-team: an unrelated experiment-logging and visualization library (versions 20.4 and 20.5), not this game. `pip install alchemy` installs their package, and this project can't be uploaded under that name. The project isn't ready for distribution yet, so nothing needs to happen now. Before any future release, choose a distinct distribution name such as `alchemy-match` or `fourfold-alchemy`; the `alchemy` import and command names can stay.
+- **PyPI name: resolved.** `alchemy` on PyPI belongs to catalyst-team (an unrelated experiment-logging library, versions 20.4 and 20.5), so the distribution name is now `alchemy-game`, which was free on PyPI as of 2026-10-08. PyPI does not reserve names, so it is only claimed once a first release is uploaded. The `alchemy` import and command names are unchanged.
 - **There's no LICENSE file.** Add one for the code and the generated symbol art.
 - **`img/AoA_symbols.pdf`** is a third-party-looking reference (an Adobe InDesign 2015 export). The README already says rights haven't been reviewed. Since the repo is public, consider removing it, or confirm you're allowed to redistribute it.
 - **No CI and no test runner config.** Add a GitHub Actions workflow that runs the unit tests and the headless smoke test with `SDL_VIDEODRIVER=dummy`, plus a `[dependency-groups] dev = ["pytest"]` and `[tool.pytest.ini_options] pythonpath = ["src"]`, so plain `pytest` works without `PYTHONPATH`.
@@ -117,5 +117,5 @@ The rules layer is solid. Over 300 seeded games of random play, no invariant bro
 4. Add `Game.hint()` and make `resolve()` always return a list.
    - After each of fixes 1–4, remove the matching `xfail` marker in `tests/edge/`.
 5. Add CI (unit tests, headless smoke test, wheel install test) and a LICENSE. Review whether to keep `AoA_symbols.pdf`.
-6. When the project is ready to distribute, pick a PyPI name that doesn't conflict (`alchemy` belongs to catalyst-team).
+6. When the project is ready to distribute, publish under `alchemy-game` (renamed from `alchemy`, which belongs to catalyst-team).
 7. Refactor `app.main()` into testable pieces, then add UI-logic tests.
