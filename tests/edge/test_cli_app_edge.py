@@ -274,3 +274,64 @@ def test_hint_on_dead_board_does_not_crash():
             return [key(pygame.K_h)]
         return [pygame.event.Event(pygame.QUIT)]
     drive(script)
+
+
+def test_completed_game_saved_once_after_last_cascade(tmp_path):
+    from alchemy.scores import Scoreboard
+    from alchemy.board import legal_moves
+    queue = []
+    def script(frame, st):
+        game = st['games'][-1]
+        if queue:
+            return [queue.pop(0)]
+        if game.pending:
+            return []
+        if game.moves:
+            a, b = legal_moves(game.grid)[0]
+            queue.append(click(b))
+            return [click(a)]
+        st['score'] = game.score
+        st['done_frames'] = st.get('done_frames', 0) + 1
+        if st['done_frames'] < 4:
+            return [key(pygame.K_l)]
+        return [pygame.event.Event(pygame.QUIT)]
+    state = drive(script, argv=('--seed','7','--player','Tester','--scores-dir',str(tmp_path)))
+    scores = Scoreboard(tmp_path)
+    assert len(scores.top(7)) == 1
+    assert scores.top(7)[0]['score'] == state['score']
+    assert scores.top() == []
+    scores.close()
+
+
+def test_abandoned_game_not_recorded(tmp_path):
+    from alchemy.scores import Scoreboard
+    def script(frame, st):
+        if frame == 1:
+            return [key(pygame.K_r), key(pygame.K_l), click((0,0))]
+        return [pygame.event.Event(pygame.QUIT)]
+    drive(script, argv=('--scores-dir',str(tmp_path)))
+    scores = Scoreboard(tmp_path)
+    assert scores.top() == []
+    scores.close()
+
+
+def test_name_editor_save_cancel_and_cli_persistence(tmp_path):
+    from alchemy.scores import Scoreboard
+    def script(frame, st):
+        if frame == 1:
+            return [key(pygame.K_p), pygame.event.Event(pygame.TEXTINPUT, text='Ada'), key(pygame.K_RETURN)]
+        if frame == 2:
+            return [key(pygame.K_p), pygame.event.Event(pygame.TEXTINPUT, text='Cancelled'), key(pygame.K_ESCAPE)]
+        return [pygame.event.Event(pygame.QUIT)]
+    drive(script, argv=('--player','Initial','--scores-dir',str(tmp_path)))
+    scores = Scoreboard(tmp_path)
+    assert scores.player() == 'Ada'
+    scores.close()
+    assert run('--smoke-test','--scores-dir',str(tmp_path)).returncode == 0
+    scores = Scoreboard(tmp_path)
+    assert scores.player() == 'Ada'
+    scores.close()
+    assert run('--smoke-test','--scores-dir',str(tmp_path),'--player','New').returncode == 0
+    scores = Scoreboard(tmp_path)
+    assert scores.player() == 'New'
+    scores.close()

@@ -14,3 +14,10 @@ os.environ.setdefault('PYGAME_HIDE_SUPPORT_PROMPT', '1')
 SRC = Path(__file__).resolve().parents[1] / 'src'
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
+
+# Subprocess and UI tests must never read or change the player's real scores.
+import atexit
+import tempfile
+_score_directory = tempfile.TemporaryDirectory(prefix='alchemy-test-scores-')
+os.environ['ALCHEMY_DATA_DIR'] = _score_directory.name
+atexit.register(_score_directory.cleanup)

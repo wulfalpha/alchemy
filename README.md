@@ -71,7 +71,7 @@ The full suite, including the edge-case tests in `tests/edge/`, needs pytest:
 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run --with pytest pytest -q
 ```
 
-Use `alchemy --seed 42` for a reproducible game. This first version has session scoring; persistent high scores, bundled sound clips, and additional modes are not implemented yet.
+Use `alchemy --seed 42` for a reproducible game. This first version has session scoring; bundled sound clips and additional modes are not implemented yet.
 
 ## License
 
@@ -90,3 +90,19 @@ Use `--assets-dir /path/to/images` for custom PNGs in installed copies. Invalid 
 Regenerating existing artwork requires `python tools/draw_symbols.py --force`. This overwrites both custom and packaged defaults.
 
 Run the full regression suite with `uv run --with pytest pytest -q`.
+
+## Offline high scores
+
+Completed 30-move experiments are saved automatically after the last cascade. Restarting or quitting an unfinished game does not submit a score. Press **L** or click **Local scores** to view the top ten; **L** or **Esc** returns to the board. The scoreboard does not change the board or prevent a pending cascade from finishing. No account or network connection is used.
+
+Press **P** or click the player name at the top right to edit it. Type a name, then press **Enter** to save or **Esc** to cancel; **Ctrl+A** selects the existing name for replacement. The last saved name is remembered locally. You can also set and remember it with `alchemy --player "Ada"` (16 printable characters maximum; first-use default: Alchemist). Editing pauses pending reactions. Changes apply to unfinished and future experiments; existing score entries keep their original names. Entries show the name, points, and UTC completion date. Ties list the earlier result first. All completed results are retained locally; only the best ten in the current category are displayed.
+
+Normal games, each specific `--seed` challenge, game modes, and scoring-rule versions have separate rankings. Hints remain free and do not disqualify a score. This is a personal scoreboard, not a tamper-proof competitive leaderboard.
+
+Scores are stored in `scores.sqlite3`:
+
+- Windows: `%LOCALAPPDATA%/Alchemy/`
+- macOS: `~/Library/Application Support/Alchemy/`
+- Linux: `$XDG_DATA_HOME/alchemy/`, or `~/.local/share/alchemy/`
+
+Use `--scores-dir /path/to/folder` or `ALCHEMY_DATA_DIR` to choose another directory. The command-line option takes priority. The game creates the directory when needed. A damaged, unsupported, or unwritable database displays an in-game warning and leaves gameplay available; it is never silently replaced. To back up or reset scores, close the game first, then copy or move `scores.sqlite3`.
