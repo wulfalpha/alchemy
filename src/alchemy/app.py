@@ -9,7 +9,8 @@ import pygame
 from .board import Game, SIZE, KINDS
 from .resources import load_symbols, NAMES
 from .audio import Audio
-from .scores import Scoreboard
+from .scores import Scoreboard, RULES, LEGACY_RULES
+from .motion import Motion
 
 WIDTH, HEIGHT = 1040, 780
 LEFT, TOP, TILE = 48, 154, 70
@@ -94,6 +95,14 @@ def run(args, scores):
     selected = None
     hint = None
     next_resolve = 0
+    score_rules = RULES
+    reduced_motion = scores.reduced_motion()
+    motion = Motion()
+    motion_time = 0
+    previous_time = pygame.time.get_ticks()
+    clear_started = 0
+    if not reduced_motion and not args.smoke_test:
+        motion.entrance(motion_time)
     running = True
     player_button = pygame.Rect(662, 28, 320, 34)
     hint_button = pygame.Rect(662, 590, 142, 46)
@@ -105,6 +114,9 @@ def run(args, scores):
 
     while running:
         now = pygame.time.get_ticks()
+        if not editing_name:
+            motion_time += now - previous_time
+        previous_time = now
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -133,6 +145,13 @@ def run(args, scores):
                         show_scores = False
                     else:
                         running = False
+                elif event.key == pygame.K_a:
+                    reduced_motion = not reduced_motion
+                    scores.set_reduced_motion(reduced_motion)
+                    motion.finish()
+                elif event.key == pygame.K_TAB and show_scores:
+                    score_rules = LEGACY_RULES if score_rules == RULES else RULES
+                    results = scores.top(args.seed, rules=score_rules)
                 elif event.key == pygame.K_p:
                     editing_name = True
                     name_buffer = args.player
@@ -140,17 +159,22 @@ def run(args, scores):
                     pygame.key.start_text_input()
                 elif event.key == pygame.K_l:
                     show_scores = not show_scores
-                    results = scores.top(args.seed)
+                    results = scores.top(args.seed, rules=score_rules)
                 elif event.key == pygame.K_m:
                     audio.toggle()
                 elif event.key == pygame.K_r:
                     audio.play("restart")
                     game = Game(args.seed)
+                    score_rules = RULES
+                    results = scores.top(args.seed)
+                    motion.finish()
+                    if not reduced_motion:
+                        motion.entrance(motion_time)
                     run_id = str(uuid4())
                     score_saved = False
                     show_scores = False
                     selected = hint = None
-                elif event.key == pygame.K_h and not show_scores and not game.pending and game.moves:
+                elif event.key == pygame.K_h and not show_scores and not motion.active(motion_time) and not game.pending and game.moves:
                     hint = game.hint()
                     audio.play("hint")
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -162,18 +186,23 @@ def run(args, scores):
                     pygame.key.start_text_input()
                 elif scores_button.collidepoint(pos):
                     show_scores = not show_scores
-                    results = scores.top(args.seed)
+                    results = scores.top(args.seed, rules=score_rules)
                 elif restart_button.collidepoint(pos):
                     audio.play("restart")
                     game = Game(args.seed)
+                    score_rules = RULES
+                    results = scores.top(args.seed)
+                    motion.finish()
+                    if not reduced_motion:
+                        motion.entrance(motion_time)
                     run_id = str(uuid4())
                     score_saved = False
                     show_scores = False
                     selected = hint = None
-                elif hint_button.collidepoint(pos) and not show_scores and not game.pending and game.moves:
+                elif hint_button.collidepoint(pos) and not show_scores and not motion.active(motion_time) and not game.pending and game.moves:
                     hint = game.hint()
                     audio.play("hint")
-                elif not show_scores and not game.pending and game.moves:
+                elif not show_scores and not motion.active(motion_time) and not game.pending and game.moves:
                     x = int((pos[0] - LEFT) // TILE)
                     y = int((pos[1] - TOP) // TILE)
                     if 0 <= x < SIZE and 0 <= y < SIZE:
@@ -184,20 +213,29 @@ def run(args, scores):
                         elif selected is not None and abs(selected[0]-x) + abs(selected[1]-y) == 1:
                             if game.attempt(selected, cell):
                                 audio.play("swap")
-                                next_resolve = now + 350
+                                clear_started = motion_time
+                                next_resolve = motion_time + 350
                             else:
                                 audio.play("invalid")
                             selected = None
                         else:
                             selected = cell
                             audio.play("select")
-        if not editing_name and game.pending and now >= next_resolve:
-            for sound_event in game.resolve():
+        if not editing_name and not motion.active(motion_time) and game.pending and motion_time >= next_resolve:
+            cleared = set(game.pending)
+            events = game.resolve()
+            if not reduced_motion:
+                if 'shuffle' in events:
+                    motion.entrance(motion_time)
+                else:
+                    motion.fall(cleared, motion_time)
+            for sound_event in events:
                 audio.play(sound_event)
                 if sound_event == 'game_over' and not score_saved:
                     score_saved = scores.record(run_id, args.player, game.score, args.seed)
-                    results = scores.top(args.seed)
-            next_resolve = now + 350
+                    results = scores.top(args.seed, rules=score_rules)
+            clear_started = motion_time + (0 if reduced_motion else motion.duration)
+            next_resolve = clear_started + 350
 
         screen.fill(BG)
         pygame.draw.circle(screen, (21, 34, 40), (975, 60), 260, 1)
@@ -208,12 +246,18 @@ def run(args, scores):
         text(f'Player: {args.player}  [P]', (670, 35), 14, GOLD)
         text('A little patience. A little transformation.', (662, 67), 16, MUTED)
         pygame.draw.line(screen, (57, 68, 68), (48, 125), (982, 125))
+        screen.set_clip(pygame.Rect(LEFT, TOP, SIZE*TILE, SIZE*TILE))
         for y, row in enumerate(game.grid):
             for x, value in enumerate(row):
-                rect = pygame.Rect(LEFT+x*TILE+3, TOP+y*TILE+3, TILE-6, TILE-6)
+                dx, dy = motion.offset(x, y, motion_time)
+                rect = pygame.Rect(LEFT+(x+dx)*TILE+3, TOP+(y+dy)*TILE+3, TILE-6, TILE-6)
                 pygame.draw.rect(screen, COLORS[value], rect, border_radius=10)
                 pygame.draw.rect(screen, (255, 226, 154) if (x,y) in game.pending else (104, 107, 99), rect, 1, border_radius=10)
-                screen.blit(symbols[value], symbols[value].get_rect(center=rect.center))
+                symbol = symbols[value]
+                if (x,y) in game.pending and not reduced_motion and not motion.active(motion_time):
+                    symbol = symbol.copy()
+                    symbol.set_alpha(max(0, int(255 * (1-(motion_time-clear_started)/350))))
+                screen.blit(symbol, symbol.get_rect(center=rect.center))
                 if selected == (x, y) or (hint and (x, y) in hint):
                     pygame.draw.rect(screen, GOLD, rect.inflate(4, 4), 3, border_radius=12)
                 if (x,y) in game.pending:
@@ -221,6 +265,7 @@ def run(args, scores):
                     overlay.fill((255, 234, 173, 95))
                     screen.blit(overlay, rect)
 
+        screen.set_clip(None)
         text('YOUR EXPERIMENT', (662, 158), 14, GOLD)
         text(f'{game.score:,}', (658, 183), 48)
         text('POINTS', (664, 244), 14, MUTED)
@@ -228,7 +273,7 @@ def run(args, scores):
         text('MOVES LEFT', (857, 244), 14, MUTED)
         pygame.draw.line(screen, (57, 68, 68), (662, 282), (982, 282))
         text('The practice', (662, 305), 24)
-        for i, line in enumerate(('Swap two neighboring symbols.', 'Align 4 or more in a row or column.', 'Cleared symbols make room for new ones.', 'Chain reactions multiply your points.', 'Cross two 4+ lines: +200 per plus.')):
+        for i, line in enumerate(('Swap two neighboring symbols.', 'Align 4 or more in a row or column.', 'Cleared symbols make room for new ones.', 'Chain reactions multiply your points.', 'L +100 / T +150 / Plus +200.')):
             text(line, (662, 350+i*28), 14, MUTED)
         for i, symbol in enumerate(symbols):
             screen.blit(symbol, (663+i*65, 496))
@@ -239,12 +284,17 @@ def run(args, scores):
         if game.last_reaction:
             reaction = game.last_reaction
             text(f"Reaction +{reaction['total']}  (x{reaction['multiplier']})", (662, 645), 19, GOLD)
-            text(f"Base {reaction['base']} + long lines {reaction['length']} + plus {reaction['plus']}", (662, 675), 14, MUTED)
-        text(f'Sound: {"off" if audio.muted else "on"}  [M]   /   ESC to quit', (662, 710), 14, MUTED)
+            text(f"Base {reaction['base']} / long lines +{reaction['length']}", (662, 672), 14, MUTED)
+            text(f"L +{reaction['l_shape']} / T +{reaction['t_shape']} / Plus +{reaction['plus']}", (662, 692), 14, GOLD)
+        text(f'Sound: {"off" if audio.muted else "on"}  [M]   /   ESC to quit', (662, 739), 14, MUTED)
+        text(f'Motion: {"reduced" if reduced_motion else "animated"}  [A]', (662, 716), 14, MUTED)
         if not scores.error:
-            text(game.message, (48, 735), 16, GOLD)
+            message = game.message
+            while fonts[16].size(message)[0] > 560:
+                message = message[:-2] + '~'
+            text(message, (48, 735), 16, GOLD)
 
-        if game.moves == 0 and not game.pending:
+        if game.moves == 0 and not game.pending and not motion.active(motion_time):
             shade = pygame.Surface((SIZE*TILE, SIZE*TILE), pygame.SRCALPHA)
             shade.fill((9, 17, 24, 225))
             screen.blit(shade, (LEFT, TOP))
@@ -258,7 +308,7 @@ def run(args, scores):
         if show_scores:
             panel = pygame.Rect(LEFT, TOP, SIZE*TILE, SIZE*TILE)
             pygame.draw.rect(screen, (20, 33, 40), panel, border_radius=12)
-            text('Local high scores', (80, 175), 24, GOLD)
+            text('Local high scores' if score_rules == RULES else 'Previous high scores', (80, 175), 24, GOLD)
             category = 'Classic / 30 moves' if args.seed is None else f'Seeded practice / seed {args.seed}'
             text(category[:48], (80, 215), 16, MUTED)
             text('PLAYER', (80, 252), 14, MUTED)
@@ -274,6 +324,7 @@ def run(args, scores):
                 text(entry['completed'][:10], (440, y), 14, MUTED)
             if not results:
                 text('Complete an experiment to set a score.', (80, 300), 19)
+            text('Tab: current / previous scoring', (80, 630), 16, GOLD)
             text('L or Esc to return to your experiment', (80, 658), 16, MUTED)
         if scores.error:
             text('Local scores unavailable; your game can continue.', (48, 735), 16, GOLD)

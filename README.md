@@ -37,7 +37,7 @@ Or install into your Python environment with `python -m pip install -e .`, then 
 - Match **four or more** identical symbols horizontally or vertically. Diagonals and groups without a four-symbol line do not clear.
 - Valid swaps use one of your 30 moves. Invalid swaps are reversed for free.
 - Cleared tiles refill from above; further matches produce cascades.
-- Each cleared symbol earns 25 points, with another 25 for each symbol beyond four **in each horizontal or vertical matched line**. A maximal line is scored only once. The total is multiplied by the cascade number. Intersections count each tile once. A true plus adds **200 points per crossing**, before the cascade multiplier: both horizontal and vertical runs must be 4+ symbols and extend on both sides of the crossing. T and L shapes do not earn this bonus.
+- Each cleared symbol earns 25 points, with another 25 for each symbol beyond four **in each horizontal or vertical matched line**. A maximal line is scored only once. The total is multiplied by the cascade number. Intersections count each tile once. A true plus adds **200 points per crossing**, before the cascade multiplier: both horizontal and vertical runs must be 4+ symbols and extend on both sides of the crossing. T and L shapes earn their own bonuses, described below.
 - **H** or **Hint** highlights a valid swap, without a penalty.
 - **R** or **New game** restarts. **Esc** quits.
 - Boards with no valid swaps are replaced automatically for free; the score and remaining moves carry over.
@@ -81,7 +81,7 @@ Released under the [MIT License](https://github.com/wulfalpha/alchemy/blob/main/
 
 The window is resizable: the board keeps its proportions, and mouse controls scale with it. The reaction panel shows base points, longer-line points, plus points, and the cascade multiplier for the latest reaction.
 
-Scoring is `(25 × unique cleared tiles + 25 × sum of each line's length beyond 4 + 200 × plus crossings) × cascade number`. A four scores 100, a five 150, and a six 200. Two separate fours score 200; two crossing fours score 375 if they form a true plus. Multiple qualifying crossings, including those in solid blocks, each receive the plus bonus. Diagonals never count.
+Scoring is `(25 × unique cleared tiles + 25 × sum of each line's length beyond 4 + 100 × L crossings + 150 × T crossings + 200 × plus crossings) × cascade number`. A four scores 100, a five 150, and a six 200. Two separate fours score 200; two crossing fours score 375 if they form a true plus. Multiple qualifying crossings, including those in solid blocks, each receive the plus bonus. Diagonals never count.
 
 Hints cycle through valid swaps without changing future tiles. With `--seed`, restarting intentionally repeats the same experiment.
 
@@ -126,3 +126,27 @@ The script builds with PyInstaller, launches the packaged executable outside the
 source tree with dummy SDL drivers, verifies a rendered screenshot, and writes an
 archive plus SHA-256 checksum under `dist/desktop/archives/`. Each platform must
 be built on that platform. macOS CI currently targets Apple silicon only.
+
+## Shape reactions and motion
+
+Two intersecting horizontal/vertical runs of **at least four** earn one exclusive
+bonus at each crossing, before the cascade multiplier:
+
+- **L: +100** when both lines end at the crossing.
+- **T: +150** when one line ends at the crossing.
+- **Plus: +200** when neither line ends at the crossing.
+
+All rotations count. Base points still count each tile once, and each maximal
+line still earns 25 extra points for every symbol beyond four. A crossing of two
+fours therefore scores 275 (L), 325 (T), or 375 (plus). Dense blocks can earn
+multiple crossings, with each crossing classified only once.
+
+New games and reshuffles sweep in from a randomly selected side. Matches fade,
+then surviving and replacement tiles fall into place. These cosmetic choices
+never affect the seeded game's random sequence. Board input waits for tiles to
+settle; restart remains available. The name editor pauses the reaction sequence.
+
+Press **A** to toggle remembered reduced motion (no sweeps, fades, or falling
+animations). **Tab** inside the local scoreboard switches between new shape
+scoring and previous per-line scoring; historical scores are preserved separately.
+Sound clips remain optional; `l_shape` and `t_shape` hooks are ready.

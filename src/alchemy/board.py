@@ -33,6 +33,20 @@ def matches(grid):
     return {cell for run in matched_runs(grid) for cell in run}
 
 
+def shape_crossings(grid):
+    """One exclusive L/T/plus classification per crossing of maximal 4+ runs."""
+    runs = matched_runs(grid)
+    horizontal = [r for r in runs if r[0][1] == r[-1][1]]
+    vertical = [r for r in runs if r[0][0] == r[-1][0]]
+    shapes = {'l_shape': set(), 't_shape': set(), 'plus': set()}
+    for h in horizontal:
+        for v in vertical:
+            for cell in set(h).intersection(v):
+                ends = int(cell in (h[0], h[-1])) + int(cell in (v[0], v[-1]))
+                shapes[('plus', 't_shape', 'l_shape')[ends]].add(cell)
+    return shapes
+
+
 def plus_centers(grid):
     """True pluses: both 4+ runs extend on both sides of their crossing."""
     centers = set()
@@ -138,20 +152,25 @@ class Game:
             return []
         self.chain += 1
         count = len(self.pending)
-        pluses = len(plus_centers(self.grid) & self.pending)
+        shapes = shape_crossings(self.grid)
+        pluses = len(shapes['plus'])
+        l_bonus = len(shapes['l_shape']) * 100
+        t_bonus = len(shapes['t_shape']) * 150
         bonus = pluses * PLUS_BONUS
         length_bonus = sum((len(run) - 4) * 25 for run in matched_runs(self.grid))
-        points = (count * 25 + length_bonus + bonus) * self.chain
+        points = (count * 25 + length_bonus + bonus + l_bonus + t_bonus) * self.chain
         self.last_reaction = dict(base=count * 25, length=length_bonus, plus=bonus,
-                                  multiplier=self.chain, total=points)
+                                  multiplier=self.chain, total=points, l_shape=l_bonus, t_shape=t_bonus)
         self.hint_index = 0
         events = ["cascade" if self.chain > 1 else "match"]
-        if pluses:
-            events.append("plus")
+        for shape, cells in shapes.items():
+            if cells:
+                events.append(shape)
         self.score += points
         self.message = f'{count} symbols transmuted!  +{points}  /  Cascade x{self.chain}'
-        if pluses:
-            self.message += f'  /  Plus bonus +{bonus * self.chain}'
+        labels = [label for key, label in (('l_shape', 'L reaction'), ('t_shape', 'T reaction'), ('plus', 'Plus reaction')) if shapes[key]]
+        if labels:
+            self.message += '  /  ' + ', '.join(labels)
         refill(self.grid, self.pending, self.rng)
         self.pending = matches(self.grid)
         if not self.pending and self.moves and not legal_moves(self.grid):

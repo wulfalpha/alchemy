@@ -5,7 +5,8 @@ from pathlib import Path
 import sqlite3
 import sys
 
-RULES = 'per-line-v1'
+RULES = 'shapes-v2'
+LEGACY_RULES = 'per-line-v1'
 MODE = 'classic-30'
 
 
@@ -53,6 +54,24 @@ class Scoreboard:
         if self.connection is not None:
             self.connection.close()
             self.connection = None
+
+    def reduced_motion(self):
+        if self.connection is None:
+            return False
+        try:
+            row = self.connection.execute("SELECT value FROM settings WHERE key='reduced_motion'").fetchone()
+            return row is not None and row[0] == '1'
+        except sqlite3.Error as error:
+            self._failed(error)
+            return False
+
+    def set_reduced_motion(self, enabled):
+        if self.connection is not None:
+            try:
+                with self.connection:
+                    self.connection.execute("INSERT OR REPLACE INTO settings VALUES ('reduced_motion', ?)", ('1' if enabled else '0',))
+            except sqlite3.Error as error:
+                self._failed(error)
 
     def player(self):
         if self.connection is None:

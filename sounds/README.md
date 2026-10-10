@@ -25,3 +25,7 @@ uv run alchemy --mute
 ```
 
 `--sound-dir` overrides the default search directories. For distribution, place effects under `src/alchemy/assets/sounds/` before building; this is the fallback when running an installed package. Keep any required attribution/license information with sounds you add.
+
+Shape reactions also support `l_shape.wav` and `t_shape.wav` (or `.ogg`).
+L, T, and plus effects play once per shape type present in a clear, alongside
+its match/cascade effect. All clips remain optional.

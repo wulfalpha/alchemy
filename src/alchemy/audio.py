@@ -8,7 +8,7 @@ from pathlib import Path
 import pygame
 
 EVENTS = ('select', 'swap', 'invalid', 'match', 'cascade', 'plus',
-          'hint', 'shuffle', 'restart', 'game_over')
+          'l_shape', 't_shape', 'hint', 'shuffle', 'restart', 'game_over')
 
 
 class Audio:

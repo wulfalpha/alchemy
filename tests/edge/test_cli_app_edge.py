@@ -238,12 +238,14 @@ def test_restart_mid_cascade_and_with_seed_repeats_same_board():
     def script(frame, st):
         g = st['games'][-1]
         if frame == 1:
+            return []  # wait for the entrance animation
+        if frame == 2:
             a, b = legal_moves(g.grid)[0]
             return [click(a), click(b)]
-        if frame == 2:
+        if frame == 3:
             assert g.pending
             return [key(pygame.K_r)]
-        if frame == 3:
+        if frame == 4:
             return [click_px((818 + 10, 590 + 10))]  # New game button
         return [pygame.event.Event(pygame.QUIT)]
 
