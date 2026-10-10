@@ -106,3 +106,23 @@ Scores are stored in `scores.sqlite3`:
 - Linux: `$XDG_DATA_HOME/alchemy/`, or `~/.local/share/alchemy/`
 
 Use `--scores-dir /path/to/folder` or `ALCHEMY_DATA_DIR` to choose another directory. The command-line option takes priority. The game creates the directory when needed. A damaged, unsupported, or unwritable database displays an in-game warning and leaves gameplay available; it is never silently replaced. To back up or reset scores, close the game first, then copy or move `scores.sqlite3`.
+
+## Portable preview builds
+
+The **Desktop preview** GitHub Actions workflow tests and builds portable apps on
+pushes/PRs to `main`, or via **Actions → Desktop preview → Run workflow**.
+Download the artifact matching your OS/CPU from a successful run, then extract
+both the artifact ZIP and the archive inside. See [tester instructions](docs/TESTING.md).
+Windows builds use an application folder with UPX disabled and must pass a Defender
+scan before upload. Previews are unsigned; no PyPI release is triggered by this workflow.
+
+To build on your own operating system:
+
+```sh
+uv run --locked --group build python tools/build_desktop.py
+```
+
+The script builds with PyInstaller, launches the packaged executable outside the
+source tree with dummy SDL drivers, verifies a rendered screenshot, and writes an
+archive plus SHA-256 checksum under `dist/desktop/archives/`. Each platform must
+be built on that platform. macOS CI currently targets Apple silicon only.

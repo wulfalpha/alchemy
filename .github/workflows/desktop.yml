@@ -1,0 +1,53 @@
+name: Desktop preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Portable (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          python-version: '3.12'
+          enable-cache: true
+      - name: Tests
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: uv run --locked --group build --with pytest pytest -q
+      - name: Build and smoke-test portable app
+        run: uv run --locked --group build python tools/build_desktop.py
+      - name: Scan Windows bundle and archive with Defender
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $scanner = Get-ChildItem "$env:ProgramData\Microsoft\Windows Defender\Platform\*\MpCmdRun.exe" -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $scanner) { $scanner = "$env:ProgramFiles\Windows Defender\MpCmdRun.exe" }
+          if (-not (Test-Path $scanner)) { throw 'Defender scanner unavailable; refusing to upload an unscanned Windows build.' }
+          & $scanner -SignatureUpdate
+          if ($LASTEXITCODE -ne 0) { throw 'Defender signature update failed.' }
+          & $scanner -Scan -ScanType 3 -File "$env:GITHUB_WORKSPACE\dist\desktop" -DisableRemediation
+          if ($LASTEXITCODE -ne 0) { throw 'Defender detected a threat or could not complete the scan. See scan output.' }
+      - name: Upload tested portable archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: Alchemy-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
+          path: dist/desktop/archives/*
+          if-no-files-found: error
+          retention-days: 14

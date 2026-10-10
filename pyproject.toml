@@ -39,3 +39,8 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-name = "alchemy"
+
+[dependency-groups]
+build = [
+    "pyinstaller==6.22.3",
+]
