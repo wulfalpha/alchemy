@@ -56,8 +56,8 @@ def test_entrance_settles_and_cancels(side):
     motion.entrance(100, side)
     assert motion.active(100)
     assert motion.offset(4,4,100) != (0,0)
-    assert not motion.active(420)
-    assert motion.offset(4,4,420) == (0,0)
+    assert not motion.active(100 + motion.duration)
+    assert motion.offset(4,4,100 + motion.duration) == (0,0)
     motion.finish()
     assert motion.offset(4,4,0) == (0,0)
 

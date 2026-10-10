@@ -184,7 +184,7 @@ def drive(script, argv=('--seed', '7'), max_frames=20000):
 
     with patch.object(app, 'Game', RecGame), \
          patch('pygame.event.get', fake_get), \
-         patch('pygame.time.get_ticks', lambda: state['frame'] * 400), \
+         patch('pygame.time.get_ticks', lambda: state['frame'] * 800), \
          patch('pygame.time.Clock', FakeClock), \
          patch.object(sys, 'argv', ['alchemy', *argv]):
         app.main()

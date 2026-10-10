@@ -4,7 +4,9 @@ from .board import SIZE
 
 
 class Motion:
-    duration = 320
+    duration = 550
+    entrance_duration = 700
+    fall_duration = 550
 
     def __init__(self):
         self.started = -self.duration
@@ -18,6 +20,7 @@ class Motion:
         self.origins = {}
 
     def entrance(self, now, side=None):
+        self.duration = self.entrance_duration
         side = side or SystemRandom().choice(('left', 'right', 'top', 'bottom'))
         dx, dy = {'left': (-SIZE, 0), 'right': (SIZE, 0),
                   'top': (0, -SIZE), 'bottom': (0, SIZE)}[side]
@@ -25,6 +28,7 @@ class Motion:
         self.origins = {(x, y): (dx, dy) for y in range(SIZE) for x in range(SIZE)}
 
     def fall(self, cleared, now):
+        self.duration = self.fall_duration
         self.started = now
         self.origins = {}
         for x in range(SIZE):
