@@ -5,8 +5,14 @@ from pathlib import Path
 import sqlite3
 import sys
 
-RULES = 'shapes-v2'
-LEGACY_RULES = 'per-line-v1'
+RULES = 'shapes-v3'          # four-element Classic and Diagonal
+LEGACY_RULES = 'shapes-v2'   # retired five-element orthogonal play
+OLDEST_RULES = 'per-line-v1'
+# Newest first. The scoreboard cycles these so no past scoring run is orphaned.
+RULE_HISTORY = (RULES, LEGACY_RULES, OLDEST_RULES)
+RULE_LABELS = {RULES: 'Local high scores',
+               LEGACY_RULES: 'Legacy scores / five elements',
+               OLDEST_RULES: 'Legacy scores / per-line'}
 MODE = 'classic-30'
 
 

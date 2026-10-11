@@ -3,8 +3,9 @@ import logging
 from importlib.resources import files
 from pathlib import Path
 import pygame
+from .modes import WITH_SUN
 
-NAMES = ('fire', 'water', 'air', 'earth', 'sun')
+NAMES = WITH_SUN  # every packaged symbol; a mode may use a subset
 
 
 def source_directory(name):
@@ -12,12 +13,12 @@ def source_directory(name):
     return root / name if (root / 'src' / 'alchemy' / 'app.py').is_file() else None
 
 
-def load_symbols(directory=None):
+def load_symbols(directory=None, names=NAMES):
     custom_root = Path(directory) if directory else source_directory('img')
     if directory and not custom_root.is_dir():
         logging.warning('Artwork directory does not exist: %s', custom_root)
     symbols = []
-    for name in NAMES:
+    for name in names:
         surface = None
         custom = custom_root / f'{name}.png' if custom_root else None
         if custom and custom.exists():

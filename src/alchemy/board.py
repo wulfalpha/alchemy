@@ -1,26 +1,33 @@
-"""Match-four rules, independent of the display."""
+"""Match-four rules, independent of the display.
+
+Every rule takes an optional `mode` (see `modes.py`) that supplies the symbol
+count and the directions a line may run in. It defaults to the primary mode, so
+`matches(grid)` and `Game()` keep working unchanged.
+"""
 from random import Random
+from .modes import DEFAULT_MODE
 
 SIZE = 8
-KINDS = 5
+KINDS = DEFAULT_MODE.kinds  # primary mode's symbol count; per-mode use mode.kinds
 PLUS_BONUS = 200
 
 
-def matched_runs(grid):
-    """Return each maximal horizontal or vertical match exactly once."""
+def matched_runs(grid, mode=None):
+    """Return each maximal match exactly once, in the mode's directions."""
+    directions = (mode or DEFAULT_MODE).directions
     runs = []
     for y in range(SIZE):
         for x in range(SIZE):
             value = grid[y][x]
             if value is None:
                 continue
-            for dx, dy in ((1, 0), (0, 1)):
+            for dx, dy in directions:
                 px, py = x - dx, y - dy
-                if px >= 0 and py >= 0 and grid[py][px] == value:
+                if 0 <= px < SIZE and 0 <= py < SIZE and grid[py][px] == value:
                     continue
                 run = []
                 xx, yy = x, y
-                while xx < SIZE and yy < SIZE and grid[yy][xx] == value:
+                while 0 <= xx < SIZE and 0 <= yy < SIZE and grid[yy][xx] == value:
                     run.append((xx, yy))
                     xx += dx
                     yy += dy
@@ -29,13 +36,17 @@ def matched_runs(grid):
     return runs
 
 
-def matches(grid):
-    return {cell for run in matched_runs(grid) for cell in run}
+def matches(grid, mode=None):
+    return {cell for run in matched_runs(grid, mode) for cell in run}
 
 
-def shape_crossings(grid):
-    """One exclusive L/T/plus classification per crossing of maximal 4+ runs."""
-    runs = matched_runs(grid)
+def shape_crossings(grid, mode=None):
+    """One exclusive L/T/plus classification per crossing of maximal 4+ runs.
+
+    Only horizontal and vertical runs form shapes; a diagonal run earns its
+    length bonus but never an L, T, or plus.
+    """
+    runs = matched_runs(grid, mode)
     horizontal = [r for r in runs if r[0][1] == r[-1][1]]
     vertical = [r for r in runs if r[0][0] == r[-1][0]]
     shapes = {'l_shape': set(), 't_shape': set(), 'plus': set()}
@@ -69,48 +80,61 @@ def plus_centers(grid):
     return centers
 
 
+def adjacent(a, b, mode=None):
+    """Whether a and b are one swap apart in this mode (diagonals included if allowed)."""
+    offset = (b[0] - a[0], b[1] - a[1])
+    opposite = (-offset[0], -offset[1])
+    swaps = (mode or DEFAULT_MODE).swaps
+    return offset in swaps or opposite in swaps
+
+
 def swap(grid, a, b):
     ax, ay = a
     bx, by = b
     grid[ay][ax], grid[by][bx] = grid[by][bx], grid[ay][ax]
 
 
-def legal_moves(grid):
+def legal_moves(grid, mode=None):
+    swaps = (mode or DEFAULT_MODE).swaps
     result = []
     for y in range(SIZE):
         for x in range(SIZE):
-            for b in ((x + 1, y), (x, y + 1)):
-                if b[0] >= SIZE or b[1] >= SIZE:
+            for dx, dy in swaps:
+                b = (x + dx, y + dy)
+                if not (0 <= b[0] < SIZE and 0 <= b[1] < SIZE):
                     continue
                 a = (x, y)
                 swap(grid, a, b)
-                if matches(grid):
+                if matches(grid, mode):
                     result.append((a, b))
                 swap(grid, a, b)
     return result
 
 
-def new_grid(rng):
+def new_grid(rng, mode=None):
+    mode = mode or DEFAULT_MODE
     while True:
-        grid = [[rng.randrange(KINDS) for _ in range(SIZE)] for _ in range(SIZE)]
-        if not matches(grid) and legal_moves(grid):
+        grid = [[rng.randrange(mode.kinds) for _ in range(SIZE)] for _ in range(SIZE)]
+        if not matches(grid, mode) and legal_moves(grid, mode):
             return grid
 
 
-def refill(grid, cleared, rng):
+def refill(grid, cleared, rng, mode=None):
+    kinds = (mode or DEFAULT_MODE).kinds
     for x in range(SIZE):
         remaining = [grid[y][x] for y in range(SIZE) if (x, y) not in cleared]
-        column = [rng.randrange(KINDS) for _ in range(SIZE - len(remaining))] + remaining
+        column = [rng.randrange(kinds) for _ in range(SIZE - len(remaining))] + remaining
         for y, value in enumerate(column):
             grid[y][x] = value
 
 
 class Game:
-    def __init__(self, seed=None):
+    def __init__(self, seed=None, mode=None):
+        self.mode = mode or DEFAULT_MODE
         self.rng = Random(seed)
-        self.grid = new_grid(self.rng)
+        self.grid = new_grid(self.rng, self.mode)
         self.score = 0
-        self.moves = 30
+        self.moves = self.mode.moves
         self.chain = 0
         self.last_reaction = None
         self.hint_index = 0
@@ -124,10 +148,10 @@ class Game:
             return False
         if any(not (0 <= x < SIZE and 0 <= y < SIZE) for x, y in (a, b)):
             return False
-        if abs(a[0] - b[0]) + abs(a[1] - b[1]) != 1:
+        if not adjacent(a, b, self.mode):
             return False
         swap(self.grid, a, b)
-        self.pending = matches(self.grid)
+        self.pending = matches(self.grid, self.mode)
         if not self.pending:
             swap(self.grid, a, b)
             self.message = 'Make a line of at least four. Try another swap.'
@@ -139,7 +163,7 @@ class Game:
     def hint(self):
         if self.pending or self.moves <= 0:
             return None
-        options = legal_moves(self.grid)
+        options = legal_moves(self.grid, self.mode)
         if not options:
             self.message = 'No available swaps.'
             return None
@@ -152,12 +176,12 @@ class Game:
             return []
         self.chain += 1
         count = len(self.pending)
-        shapes = shape_crossings(self.grid)
+        shapes = shape_crossings(self.grid, self.mode)
         pluses = len(shapes['plus'])
         l_bonus = len(shapes['l_shape']) * 100
         t_bonus = len(shapes['t_shape']) * 150
         bonus = pluses * PLUS_BONUS
-        length_bonus = sum((len(run) - 4) * 25 for run in matched_runs(self.grid))
+        length_bonus = sum((len(run) - 4) * 25 for run in matched_runs(self.grid, self.mode))
         points = (count * 25 + length_bonus + bonus + l_bonus + t_bonus) * self.chain
         self.last_reaction = dict(base=count * 25, length=length_bonus, plus=bonus,
                                   multiplier=self.chain, total=points, l_shape=l_bonus, t_shape=t_bonus)
@@ -171,10 +195,10 @@ class Game:
         labels = [label for key, label in (('l_shape', 'L reaction'), ('t_shape', 'T reaction'), ('plus', 'Plus reaction')) if shapes[key]]
         if labels:
             self.message += '  /  ' + ', '.join(labels)
-        refill(self.grid, self.pending, self.rng)
-        self.pending = matches(self.grid)
-        if not self.pending and self.moves and not legal_moves(self.grid):
-            self.grid = new_grid(self.rng)
+        refill(self.grid, self.pending, self.rng, self.mode)
+        self.pending = matches(self.grid, self.mode)
+        if not self.pending and self.moves and not legal_moves(self.grid, self.mode):
+            self.grid = new_grid(self.rng, self.mode)
             self.message = 'No swaps left: a fresh board has been brewed.'
             events.append("shuffle")
         if not self.pending and not self.moves:
