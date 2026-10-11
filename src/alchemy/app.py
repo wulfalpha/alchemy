@@ -7,10 +7,11 @@ from pathlib import Path
 os.environ.setdefault('PYGAME_HIDE_SUPPORT_PROMPT', '1')
 import pygame
 from .board import Game, SIZE, adjacent
+from .adventure import AdventureGame
 from .resources import load_symbols
 from .audio import Audio
 from .scores import Scoreboard, score_categories
-from .modes import MODES, DEFAULT_KEY
+from .modes import MODES, DEFAULT_KEY, ADVENTURE
 from .motion import Motion
 
 WIDTH, HEIGHT = 1040, 780
@@ -103,16 +104,19 @@ def run(args, scores):
     results = []
     selected = hint = None
 
+    def score_seed():
+        return game.seed if isinstance(game, AdventureGame) else args.seed
+
     def reload_scores():
         nonlocal results
         category = score_categories(mode.key, mode.label)[category_index]
-        results = scores.top(args.seed, mode=category.mode, rules=category.rules)
+        results = scores.top(score_seed(), mode=category.mode, rules=category.rules)
 
     def start_new_game(animate=True):
         """Begin a fresh experiment in the current mode. Also used by the mode switch."""
         nonlocal game, run_id, score_saved, show_scores, selected, hint
         nonlocal category_index, next_resolve, clear_started
-        game = Game(args.seed, mode)
+        game = AdventureGame(args.seed) if mode == ADVENTURE else Game(args.seed, mode)
         run_id = str(uuid4())
         score_saved = show_scores = False
         category_index = 0
@@ -133,7 +137,7 @@ def run(args, scores):
     def can_act():
         """Whether board and hint input should be accepted right now."""
         return (not show_scores and not motion.active(motion_time)
-                and not game.pending and game.moves)
+                and not game.pending and not game.finished)
 
     start_new_game(animate=not args.smoke_test)
     running = True
@@ -224,7 +228,7 @@ def run(args, scores):
                 elif can_act():
                     x = int((pos[0] - LEFT) // TILE)
                     y = int((pos[1] - TOP) // TILE)
-                    if 0 <= x < SIZE and 0 <= y < SIZE:
+                    if 0 <= x < SIZE and 0 <= y < SIZE and game.grid[y][x] is not None:
                         cell = (x, y)
                         hint = None
                         if selected == cell:
@@ -242,16 +246,18 @@ def run(args, scores):
                             audio.play("select")
         if not editing_name and not motion.active(motion_time) and game.pending and motion_time >= next_resolve:
             cleared = set(game.pending)
+            previous_grid = [row[:] for row in game.grid]
             events = game.resolve()
             if not reduced_motion:
                 if 'shuffle' in events:
                     motion.entrance(motion_time)
                 else:
-                    motion.fall(cleared, motion_time)
+                    motion.fall(cleared, motion_time, previous_grid)
             for sound_event in events:
                 audio.play(sound_event)
-                if sound_event == 'game_over' and not score_saved:
-                    score_saved = scores.record(run_id, args.player, game.score, args.seed,
+                if (sound_event == 'game_over' and not score_saved
+                        and (mode != ADVENTURE or game.outcome == 'success')):
+                    score_saved = scores.record(run_id, args.player, game.score, score_seed(),
                                                 mode=mode.key)
                     reload_scores()
             clear_started = motion_time + (0 if reduced_motion else motion.duration)
@@ -270,6 +276,10 @@ def run(args, scores):
         screen.set_clip(pygame.Rect(LEFT, TOP, SIZE*TILE, SIZE*TILE))
         for y, row in enumerate(game.grid):
             for x, value in enumerate(row):
+                if value is None:
+                    rect = pygame.Rect(LEFT+x*TILE+3, TOP+y*TILE+3, TILE-6, TILE-6)
+                    pygame.draw.rect(screen, (35, 49, 55), rect, 1, border_radius=10)
+                    continue
                 dx, dy = motion.offset(x, y, motion_time)
                 rect = pygame.Rect(LEFT+(x+dx)*TILE+3, TOP+(y+dy)*TILE+3, TILE-6, TILE-6)
                 pygame.draw.rect(screen, mode.colors[value], rect, border_radius=10)
@@ -290,12 +300,29 @@ def run(args, scores):
         text('YOUR EXPERIMENT', (662, 158), 14, GOLD)
         text(f'{game.score:,}', (658, 183), 48)
         text('POINTS', (664, 244), 14, MUTED)
-        text(f'{game.moves:02d}', (855, 183), 48)
-        text('MOVES LEFT', (857, 244), 14, MUTED)
+        remaining = game.material_left if mode == ADVENTURE else game.moves
+        text(f'{remaining:02d}', (855, 183), 48)
+        text('MATERIAL LEFT' if mode == ADVENTURE else 'MOVES LEFT', (847, 244), 14, MUTED)
+        if mode == ADVENTURE:
+            text('Board tiles + reserves', (817, 264), 14, MUTED)
         pygame.draw.line(screen, (57, 68, 68), (662, 282), (982, 282))
-        text('The practice', (662, 305), 24)
-        for i, line in enumerate(mode.practice):
-            text(line, (PANEL, 350+i*28), 14, MUTED)
+        if mode == ADVENTURE:
+            text(game.experiment.title, (662, 305), 24)
+            text(f'Target: {game.experiment.target:,} points', (PANEL, 350), 19, GOLD)
+            if sum(game.reserves):
+                text('Replacement reserves', (PANEL, 384), 14, MUTED)
+            else:
+                text('Reserves exhausted', (PANEL, 376), 14, GOLD)
+                text('Use the remaining board.', (PANEL, 395), 14, MUTED)
+            for i, name in enumerate(mode.names):
+                text(f'{name.title()}: {game.reserves[i]}',
+                     (PANEL + (i % 2)*160, 418+(i//2)*28), 16)
+            text(f'Used: {game.consumed}   Swaps: {game.turns}   No move limit',
+                 (PANEL, 474), 14, MUTED)
+        else:
+            text('The practice', (662, 305), 24)
+            for i, line in enumerate(mode.practice):
+                text(line, (PANEL, 350+i*28), 14, MUTED)
         step = PANEL_WIDTH // len(symbols)
         for i, symbol in enumerate(symbols):
             screen.blit(symbol, (PANEL + i*step + (step-SYMBOL)//2, 496))
@@ -316,24 +343,32 @@ def run(args, scores):
                 message = message[:-2] + '~'
             text(message, (48, 735), 16, GOLD)
 
-        if game.moves == 0 and not game.pending and not motion.active(motion_time):
+        if game.finished and not game.pending and not motion.active(motion_time):
             shade = pygame.Surface((SIZE*TILE, SIZE*TILE), pygame.SRCALPHA)
             shade.fill((9, 17, 24, 225))
             screen.blit(shade, (LEFT, TOP))
-            text('Experiment complete', (110, 320), 24)
+            text('Experiment stalled' if mode == ADVENTURE and game.outcome == 'stalled'
+                 else 'Experiment complete', (110, 320), 24)
             text(f'{game.score:,} points', (150, 370), 38, GOLD)
             status = 'Score saved locally' if score_saved else 'Score could not be saved'
             if score_saved and results and results[0]['id'] == run_id:
                 status = 'New local high score!'
-            text(status, (150, 425), 16, GOLD)
-            text('L: view scores    R: new experiment', (122, 465), 16)
+            if mode == ADVENTURE and game.outcome == 'stalled':
+                status = 'No playable layout found. Try again!'
+            text(status, (110, 425), 16, GOLD)
+            if mode == ADVENTURE:
+                text(f'Reactants consumed: {game.consumed}', (122, 463), 16)
+                text(f'Successful swaps: {game.turns}', (122, 489), 16)
+                text('L: view scores    R: retry experiment', (122, 535), 16)
+            else:
+                text('L: view scores    R: new experiment', (122, 465), 16)
         if show_scores:
             panel = pygame.Rect(LEFT, TOP, SIZE*TILE, SIZE*TILE)
             pygame.draw.rect(screen, (20, 33, 40), panel, border_radius=12)
             category = score_categories(mode.key, mode.label)[category_index]
             text('Local high scores' if category_index == 0 else 'Historical high scores', (80, 175), 24, GOLD)
             text(category.label, (80, 215), 16, MUTED)
-            seed_label = 'Unseeded / 30 moves' if args.seed is None else f'Seed {args.seed}'
+            seed_label = 'Unseeded / 30 moves' if score_seed() is None else f'Seed {score_seed()}'
             text(seed_label[:48], (80, 235), 14, MUTED)
             text('PLAYER', (80, 252), 14, MUTED)
             text('POINTS', (340, 252), 14, MUTED)

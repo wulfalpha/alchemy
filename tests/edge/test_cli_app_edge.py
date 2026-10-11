@@ -174,6 +174,11 @@ def drive(script, argv=('--seed', '7'), max_frames=20000):
         def __init__(self, *a, **k):
             super().__init__(*a, **k); games.append(self)
 
+    class RecAdventure(app.AdventureGame):
+        def __init__(self, *a, **k):
+            super().__init__(*a, **k)
+            games.append(self)
+
     state = {'frame': 0, 'games': games}
 
     def fake_get():
@@ -183,6 +188,7 @@ def drive(script, argv=('--seed', '7'), max_frames=20000):
         return script(state['frame'], state)
 
     with patch.object(app, 'Game', RecGame), \
+         patch.object(app, 'AdventureGame', RecAdventure), \
          patch('pygame.event.get', fake_get), \
          patch('pygame.time.get_ticks', lambda: state['frame'] * 800), \
          patch('pygame.time.Clock', FakeClock), \
@@ -280,14 +286,15 @@ def test_hint_on_dead_board_does_not_crash():
 
 def test_mode_key_cycles_and_starts_a_new_game():
     def script(frame, st):
-        if frame in (1, 2):
+        if frame in (1, 2, 3):
             return [key(pygame.K_c)]
         return [pygame.event.Event(pygame.QUIT)]
     st = drive(script)
     keys = [g.mode.key for g in st['games']]
-    assert len(keys) == 3                 # one game at startup, one per press
+    assert len(keys) == 4                 # one game at startup, one per press
     assert keys[0] != keys[1]             # the press moved to the other mode
-    assert keys[2] == keys[0]             # and cycling wraps back around
+    assert keys[2] == 'adventure-first-v1'
+    assert keys[3] == keys[0]             # and cycling wraps back around
 
 
 def test_completed_game_saved_once_after_last_cascade(tmp_path):
@@ -349,4 +356,30 @@ def test_name_editor_save_cancel_and_cli_persistence(tmp_path):
     assert run('--smoke-test','--scores-dir',str(tmp_path),'--player','New').returncode == 0
     scores = Scoreboard(tmp_path)
     assert scores.player() == 'New'
+    scores.close()
+
+
+@pytest.mark.parametrize('succeed', [True, False])
+def test_adventure_completion_records_only_success_with_effective_seed(tmp_path, succeed):
+    from alchemy.board import matches
+    from alchemy.modes import ADVENTURE
+    from alchemy.scores import Scoreboard
+
+    def script(frame, st):
+        game = st['games'][-1]
+        if frame == 1:
+            game.reserves = [0]*4
+            game.grid = [[None]*8 for _ in range(8)]
+            game.grid[7][:4] = [0]*4
+            game.pending = matches(game.grid)
+            game.score = game.experiment.target if succeed else 0
+        if frame > 5:
+            assert game.finished
+            return [pygame.event.Event(pygame.QUIT)]
+        return []
+
+    drive(script, argv=('--mode', ADVENTURE.key, '--scores-dir', str(tmp_path)))
+    scores = Scoreboard(tmp_path)
+    assert len(scores.top(42, mode=ADVENTURE.key)) == int(succeed)
+    assert scores.top(None, mode=ADVENTURE.key) == []
     scores.close()

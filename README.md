@@ -44,13 +44,14 @@ Or install into your Python environment with `python -m pip install -e .`, then 
 
 ## Game modes
 
-Two rule variants ship in the box. Press **C** to switch, or start in one with
+Three modes are available. Press **C** to switch, or start in one with
 `alchemy --mode <key>`. Switching begins a new experiment, and each mode keeps its own
 high-score ranking.
 
 | Key | Mode | Symbols | Swaps | Matches run |
 | --- | --- | --- | --- | --- |
 | `classic-30` | Classic (default) | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
+| `adventure-first-v1` | Adventure | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
 | `diagonal-30` | Diagonal | the four elements plus sun | any touching symbol, diagonals included | rows, columns, and both diagonals |
 
 **Classic** is the primary mode. Four elements for a match-four game keeps about 4.5 legal
@@ -60,9 +61,31 @@ board is almost never dealt. A diagonal line earns the same per-symbol and long-
 points as a straight one, but only horizontal and vertical runs form L, T, and plus
 crossings.
 
-Both modes are 8x8 with 30 moves and the same scoring formula, so only the symbol set and
+Classic and Diagonal are 8x8 with 30 moves and the same scoring formula, so only the symbol set and
 the directions change. Modes are defined as data in `src/alchemy/modes.py`; adding one is
-a `Mode(...)` entry in that file's registry.
+a `Mode(...)` entry in that file's registry for another 30-move variant.
+
+### Adventure: First Transmutation
+
+Start with `uv run alchemy --mode adventure-first-v1`, or press **C** twice from
+Classic. Reach **3,500 points** using the initial 64 tiles and **20 replacement
+reactants of each element**. There is no move limit. Matching consumes tiles;
+replacement tiles are drawn from the remaining reserves, with no refunds.
+When reserves run out, empty spaces remain and cannot be swapped.
+
+The complete cascade scores before success is checked. If no swaps remain,
+the game tries up to 200 rearrangements of the existing material. No new tiles
+are created by stirring. If none works, the experiment stalls; **R** retries.
+The sidebar shows your target, reserves, material remaining (board tiles plus
+reserves), and material used. A notice explains when reserves run out. Both
+successful and stalled experiments show points, reactants consumed, and successful
+swaps; **R** retries the same experiment.
+
+This first experiment defaults to seed **42** so retries repeat the same kit and
+random sequence. Use `--seed` for other starting conditions. Successful experiments
+save locally under their own experiment revision and seed; stalled and abandoned
+attempts do not enter the leaderboard. The initial target is for playtesting;
+campaign progression and reactant recovery are future work.
 
 Earlier five-element, straight-lines-only play is retired. Scores set under those rules are
 kept and shown as **legacy** scores: open the scoreboard with **L** and press **Tab** to

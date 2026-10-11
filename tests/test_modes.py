@@ -14,6 +14,8 @@ from alchemy.board import (Game, SIZE, adjacent, legal_moves, matched_runs, matc
                            shape_crossings, swap)
 from alchemy.modes import CLASSIC, DEFAULT_KEY, DIAGONAL, DIAGONALS, MODES, ORTHOGONAL, Mode
 from alchemy.scores import Scoreboard
+from alchemy.adventure import AdventureGame
+from alchemy.modes import ADVENTURE
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -28,14 +30,14 @@ def dead_grid(mode):
 def test_registry_is_keyed_consistently_and_defaults_to_classic():
     assert all(key == mode.key for key, mode in MODES.items())
     assert DEFAULT_KEY == CLASSIC.key == 'classic-30'
-    assert set(MODES) == {'classic-30', 'diagonal-30'}  # five-element play is retired
+    assert set(MODES) == {'classic-30', 'diagonal-30', 'adventure-first-v1'}  # five-element play is retired
 
 
 @pytest.mark.parametrize('key', sorted(MODES))
 def test_every_mode_is_internally_consistent(key):
     mode = MODES[key]
     assert mode.kinds == len(mode.names) == len(mode.colors) >= 2
-    assert mode.moves >= 1 and mode.directions and mode.swaps
+    assert (mode.moves is None or mode.moves >= 1) and mode.directions and mode.swaps
     assert len(mode.practice) == 5  # the panel renders exactly five rule lines
 
 
@@ -64,9 +66,9 @@ def test_classic_plays_a_complete_game_with_only_four_elements():
 def test_grid_values_always_index_into_the_palette(key):
     """The renderer indexes mode.colors[value] directly, with no clamp."""
     mode = MODES[key]
-    game = Game(11, mode)
+    game = AdventureGame(11) if mode == ADVENTURE else Game(11, mode)
     for _ in range(5):
-        assert all(0 <= v < len(mode.colors) for row in game.grid for v in row)
+        assert all(v is None or 0 <= v < len(mode.colors) for row in game.grid for v in row)
         moves = legal_moves(game.grid, mode)
         if not moves:
             break

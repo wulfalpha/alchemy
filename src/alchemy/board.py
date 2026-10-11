@@ -104,6 +104,8 @@ def legal_moves(grid, mode=None):
                 if not (0 <= b[0] < SIZE and 0 <= b[1] < SIZE):
                     continue
                 a = (x, y)
+                if grid[y][x] is None or grid[b[1]][b[0]] is None:
+                    continue
                 swap(grid, a, b)
                 if matches(grid, mode):
                     result.append((a, b))
@@ -141,12 +143,18 @@ class Game:
         self.pending = set()
         self.message = 'Select a symbol, then an adjacent symbol.'
 
+    @property
+    def finished(self):
+        return self.moves is not None and self.moves <= 0 and not self.pending
+
     def attempt(self, a, b):
-        if self.pending or self.moves <= 0:
+        if self.pending or self.finished:
             return False
         if any(not isinstance(v, int) for cell in (a, b) for v in cell):
             return False
         if any(not (0 <= x < SIZE and 0 <= y < SIZE) for x, y in (a, b)):
+            return False
+        if self.grid[a[1]][a[0]] is None or self.grid[b[1]][b[0]] is None:
             return False
         if not adjacent(a, b, self.mode):
             return False
@@ -156,12 +164,13 @@ class Game:
             swap(self.grid, a, b)
             self.message = 'Make a line of at least four. Try another swap.'
             return False
-        self.moves -= 1
+        if self.moves is not None:
+            self.moves -= 1
         self.chain = 0
         return True
 
     def hint(self):
-        if self.pending or self.moves <= 0:
+        if self.pending or self.finished:
             return None
         options = legal_moves(self.grid, self.mode)
         if not options:
@@ -195,12 +204,18 @@ class Game:
         labels = [label for key, label in (('l_shape', 'L reaction'), ('t_shape', 'T reaction'), ('plus', 'Plus reaction')) if shapes[key]]
         if labels:
             self.message += '  /  ' + ', '.join(labels)
-        refill(self.grid, self.pending, self.rng, self.mode)
+        self._refill()
         self.pending = matches(self.grid, self.mode)
+        self._settle(events)
+        return events
+
+    def _refill(self):
+        refill(self.grid, self.pending, self.rng, self.mode)
+
+    def _settle(self, events):
         if not self.pending and self.moves and not legal_moves(self.grid, self.mode):
             self.grid = new_grid(self.rng, self.mode)
             self.message = 'No swaps left: a fresh board has been brewed.'
             events.append("shuffle")
         if not self.pending and not self.moves:
             events.append("game_over")
-        return events

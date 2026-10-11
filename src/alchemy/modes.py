@@ -39,13 +39,13 @@ class Mode:
     colors: tuple
     directions: tuple = ORTHOGONAL   # directions a matching line may run in
     swaps: tuple = ORTHOGONAL        # directions a swap may reach
-    moves: int = 30
+    moves: int | None = 30
     practice: tuple = STRAIGHT_PRACTICE
 
     def __post_init__(self):
         if len(self.names) != len(self.colors):
             raise ValueError(f'{self.key}: {len(self.names)} symbols but {len(self.colors)} colours')
-        if self.kinds < 2 or self.moves < 1 or not self.directions or not self.swaps:
+        if self.kinds < 2 or (self.moves is not None and self.moves < 1) or not self.directions or not self.swaps:
             raise ValueError(f'{self.key}: needs 2+ symbols, 1+ moves, a match direction, and a swap direction')
 
     @property
@@ -74,7 +74,22 @@ DIAGONALS = Mode(
     practice=DIAGONAL_PRACTICE,
 )
 
-MODES = {mode.key: mode for mode in (CLASSIC, DIAGONALS)}
+ADVENTURE = Mode(
+    key='adventure-first-v1',
+    label='Adventure',
+    caption='Alchemy | First Transmutation',
+    tagline='One experiment. A finite supply.',
+    names=ELEMENTS,
+    colors=ELEMENT_COLORS,
+    moves=None,
+    practice=('Reach the target before the kit runs out.',
+              'Four elements. Straight-line matches.',
+              'Bottles supply replacement tiles.',
+              'No move limit; no material refunds.',
+              'L +100 / T +150 / Plus +200.'),
+)
+
+MODES = {mode.key: mode for mode in (CLASSIC, DIAGONALS, ADVENTURE)}
 DEFAULT_KEY = CLASSIC.key
 DEFAULT_MODE = MODES[DEFAULT_KEY]
 

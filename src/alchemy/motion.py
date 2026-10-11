@@ -27,12 +27,13 @@ class Motion:
         self.started = now
         self.origins = {(x, y): (dx, dy) for y in range(SIZE) for x in range(SIZE)}
 
-    def fall(self, cleared, now):
+    def fall(self, cleared, now, previous_grid=None):
         self.duration = self.fall_duration
         self.started = now
         self.origins = {}
         for x in range(SIZE):
-            survivors = [y for y in range(SIZE) if (x, y) not in cleared]
+            survivors = [y for y in range(SIZE) if (x, y) not in cleared
+                         and (previous_grid is None or previous_grid[y][x] is not None)]
             missing = SIZE - len(survivors)
             for y in range(missing):
                 self.origins[x, y] = (0, -missing)

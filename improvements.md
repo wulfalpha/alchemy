@@ -424,3 +424,17 @@ frequency, and intentional versus accidental progress. In particular, watch
 whether an exhausted element makes the board easier by reducing variety. Use
 playtesting to decide whether that late-experiment rush is desirable before
 adding a compensating penalty.
+
+### First Adventure prototype implemented (2026-10-10)
+
+`adventure-first-v1` now provides First Transmutation: four elements, seed 42 by
+default, 20 reserve tiles per element, and a 3,500-point objective without a move
+cap. Refill transfers existing inventory; exhausted columns retain empty spaces.
+Dead boards receive a bounded, inventory-preserving stir, and success is checked
+after the full cascade. Successful scores are separated by experiment revision
+and effective seed. There are no refunds or campaign unlocks yet.
+
+Ten random-play runs of the default seed continued to exhaustion scored
+3,600–4,450 points. The 3,500 target is an introductory tuning choice, not a
+claim of balanced difficulty. Next: human playtesting of pacing, the reserve
+display, stirring frequency, and the final sparse board before adding recovery.
