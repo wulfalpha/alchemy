@@ -9,7 +9,7 @@ import pygame
 from .board import Game, SIZE, adjacent
 from .resources import load_symbols
 from .audio import Audio
-from .scores import Scoreboard, RULE_HISTORY, RULE_LABELS
+from .scores import Scoreboard, score_categories
 from .modes import MODES, DEFAULT_KEY
 from .motion import Motion
 
@@ -98,23 +98,24 @@ def run(args, scores):
     clear_started = next_resolve = 0
     game = None
     run_id = ''
-    rules_index = 0
+    category_index = 0
     score_saved = show_scores = False
     results = []
     selected = hint = None
 
     def reload_scores():
         nonlocal results
-        results = scores.top(args.seed, mode=mode.key, rules=RULE_HISTORY[rules_index])
+        category = score_categories(mode.key, mode.label)[category_index]
+        results = scores.top(args.seed, mode=category.mode, rules=category.rules)
 
     def start_new_game(animate=True):
         """Begin a fresh experiment in the current mode. Also used by the mode switch."""
         nonlocal game, run_id, score_saved, show_scores, selected, hint
-        nonlocal rules_index, next_resolve, clear_started
+        nonlocal category_index, next_resolve, clear_started
         game = Game(args.seed, mode)
         run_id = str(uuid4())
         score_saved = show_scores = False
-        rules_index = 0
+        category_index = 0
         selected = hint = None
         next_resolve = clear_started = 0
         reload_scores()
@@ -182,7 +183,7 @@ def run(args, scores):
                     scores.set_reduced_motion(reduced_motion)
                     motion.finish()
                 elif event.key == pygame.K_TAB and show_scores:
-                    rules_index = (rules_index + 1) % len(RULE_HISTORY)
+                    category_index = (category_index + 1) % len(score_categories(mode.key, mode.label))
                     reload_scores()
                 elif event.key == pygame.K_p:
                     editing_name = True
@@ -329,10 +330,11 @@ def run(args, scores):
         if show_scores:
             panel = pygame.Rect(LEFT, TOP, SIZE*TILE, SIZE*TILE)
             pygame.draw.rect(screen, (20, 33, 40), panel, border_radius=12)
-            text(RULE_LABELS[RULE_HISTORY[rules_index]], (80, 175), 24, GOLD)
-            category = (f'{mode.label} / {mode.moves} moves' if args.seed is None
-                        else f'{mode.label} / seed {args.seed}')
-            text(category[:48], (80, 215), 16, MUTED)
+            category = score_categories(mode.key, mode.label)[category_index]
+            text('Local high scores' if category_index == 0 else 'Historical high scores', (80, 175), 24, GOLD)
+            text(category.label, (80, 215), 16, MUTED)
+            seed_label = 'Unseeded / 30 moves' if args.seed is None else f'Seed {args.seed}'
+            text(seed_label[:48], (80, 235), 14, MUTED)
             text('PLAYER', (80, 252), 14, MUTED)
             text('POINTS', (340, 252), 14, MUTED)
             text('DATE (UTC)', (440, 252), 14, MUTED)

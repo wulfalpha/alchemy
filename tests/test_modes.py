@@ -117,9 +117,16 @@ def test_diagonal_mode_accepts_a_diagonal_swap_that_makes_a_line():
     for y in range(1, 4):
         game.grid[y][y] = 9          # partial diagonal at (1,1) (2,2) (3,3)
     game.grid[4][4] = 0
-    game.grid[5][4] = 9              # the fourth symbol, one diagonal step away
+    game.grid[5][5] = 9              # the fourth symbol, one diagonal step away
     assert not matches(game.grid, DIAGONALS)
-    assert game.attempt((4, 5), (4, 4))
+    source, target = (5, 5), (4, 4)
+    assert abs(source[0]-target[0]) == abs(source[1]-target[1]) == 1
+    classic = Game(1, CLASSIC)
+    classic.grid = [row[:] for row in game.grid]
+    original = [row[:] for row in classic.grid]
+    assert not classic.attempt(source, target)
+    assert classic.grid == original and classic.moves == CLASSIC.moves
+    assert game.attempt(source, target)
     assert game.pending == {(1, 1), (2, 2), (3, 3), (4, 4)}
     assert game.moves == DIAGONALS.moves - 1
 
@@ -202,3 +209,22 @@ def test_every_mode_renders_a_frame(key, tmp_path):
     assert result.returncode == 0, result.stderr
     assert 'Traceback' not in result.stderr
     assert shot.stat().st_size > 0
+
+
+@pytest.mark.parametrize('mode', [CLASSIC, DIAGONALS])
+def test_experiment_categories_retrieve_original_records_without_migration(tmp_path, mode):
+    from alchemy.scores import score_categories
+    board = Scoreboard(tmp_path)
+    keys = ('four-elements-experiment-v1', 'diagonals-experiment-v1')
+    for index, rules in enumerate(keys):
+        board.record(rules, 'Tester', 100+index, seed=7, mode='classic-30', rules=rules)
+    board.record('current', 'New', 900, seed=7, mode=mode.key)
+    categories = score_categories(mode.key, mode.label)
+    assert [r['id'] for r in board.top(7, mode=categories[0].mode, rules=categories[0].rules)] == ['current']
+    for rules in keys:
+        category = next(c for c in categories if c.rules == rules)
+        rows = board.top(7, mode=category.mode, rules=category.rules)
+        assert [r['id'] for r in rows] == [rules]
+        assert board.top(None, mode=category.mode, rules=category.rules) == []
+    assert board.connection.execute('SELECT count(*) FROM scores').fetchone()[0] == 3
+    board.close()

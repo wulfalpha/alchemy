@@ -66,7 +66,10 @@ a `Mode(...)` entry in that file's registry.
 
 Earlier five-element, straight-lines-only play is retired. Scores set under those rules are
 kept and shown as **legacy** scores: open the scoreboard with **L** and press **Tab** to
-cycle through the current and legacy scoring runs. Nothing is rewritten or deleted.
+cycle through current, legacy, and experimental score categories. Both experimental
+branches remain accessible under their original mode/rules keys. The historical
+diagonal experiment is labeled "straight swaps" to distinguish it from the new
+Diagonal mode. Seeded and unseeded results remain separate. Nothing is rewritten or deleted.
 
 ## Sounds
 
