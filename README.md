@@ -39,8 +39,37 @@ Or install into your Python environment with `python -m pip install -e .`, then 
 - Cleared tiles refill from above; further matches produce cascades.
 - Each cleared symbol earns 25 points, with another 25 for each symbol beyond four **in each horizontal or vertical matched line**. A maximal line is scored only once. The total is multiplied by the cascade number. Intersections count each tile once. A true plus adds **200 points per crossing**, before the cascade multiplier: both horizontal and vertical runs must be 4+ symbols and extend on both sides of the crossing. T and L shapes earn their own bonuses, described below.
 - **H** or **Hint** highlights a valid swap, without a penalty.
-- **R** or **New game** restarts. **Esc** quits.
+- **R** or **New game** restarts. **C** switches mode. **Esc** quits.
 - Boards with no valid swaps are replaced automatically for free; the score and remaining moves carry over.
+
+## Game modes
+
+Two rule variants ship in the box. Press **C** to switch, or start in one with
+`alchemy --mode <key>`. Switching begins a new experiment, and each mode keeps its own
+high-score ranking.
+
+| Key | Mode | Symbols | Swaps | Matches run |
+| --- | --- | --- | --- | --- |
+| `classic-30` | Classic (default) | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
+| `diagonal-30` | Diagonal | the four elements plus sun | any touching symbol, diagonals included | rows, columns, and both diagonals |
+
+**Classic** is the primary mode. Four elements for a match-four game keeps about 4.5 legal
+swaps available per turn. **Diagonal** adds the sun as a fifth element but lets you swap
+and match in every direction, which keeps roughly 11 swaps available and means a dead
+board is almost never dealt. A diagonal line earns the same per-symbol and long-line
+points as a straight one, but only horizontal and vertical runs form L, T, and plus
+crossings.
+
+Both modes are 8x8 with 30 moves and the same scoring formula, so only the symbol set and
+the directions change. Modes are defined as data in `src/alchemy/modes.py`; adding one is
+a `Mode(...)` entry in that file's registry.
+
+Earlier five-element, straight-lines-only play is retired. Scores set under those rules are
+kept and shown as **legacy** scores: open the scoreboard with **L** and press **Tab** to
+cycle through current, legacy, and experimental score categories. Both experimental
+branches remain accessible under their original mode/rules keys. The historical
+diagonal experiment is labeled "straight swaps" to distinguish it from the new
+Diagonal mode. Seeded and unseeded results remain separate. Nothing is rewritten or deleted.
 
 ## Sounds
 

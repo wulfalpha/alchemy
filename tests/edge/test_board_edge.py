@@ -287,11 +287,11 @@ def test_fuzz_invariants_many_seeds_random_play():
 def test_dead_board_replacement_is_never_dead():
     game = Game(5)
     # force a dead board after resolve by setting grid to a dead layout with a pending set
-    dead = [[(x + 2 * y) % 5 for x in range(SIZE)] for y in range(SIZE)]
+    dead = [[(x + 2 * y) % game.mode.kinds for x in range(SIZE)] for y in range(SIZE)]
     game.grid = dead
     game.pending = {(0, 0)}
     orig_refill = board.refill
-    board.refill = lambda g, c, rng: None  # keep the grid dead
+    board.refill = lambda g, c, rng, mode=None: None  # keep the grid dead
     try:
         events = game.resolve()
     finally:
@@ -302,12 +302,12 @@ def test_dead_board_replacement_is_never_dead():
 
 def test_dead_board_on_last_move_is_not_shuffled():
     game = Game(5)
-    dead = [[(x + 2 * y) % 5 for x in range(SIZE)] for y in range(SIZE)]
+    dead = [[(x + 2 * y) % game.mode.kinds for x in range(SIZE)] for y in range(SIZE)]
     game.grid = dead
     game.pending = {(0, 0)}
     game.moves = 0
     orig_refill = board.refill
-    board.refill = lambda g, c, rng: None
+    board.refill = lambda g, c, rng, mode=None: None
     try:
         events = game.resolve()
     finally:

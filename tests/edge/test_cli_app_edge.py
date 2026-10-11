@@ -272,15 +272,28 @@ def test_hint_on_dead_board_does_not_crash():
     def script(frame, st):
         g = st['games'][-1]
         if frame == 1:
-            g.grid = [[(x + 2 * y) % 5 for x in range(8)] for y in range(8)]  # dead board
+            g.grid = [[(x + 2 * y) % g.mode.kinds for x in range(8)] for y in range(8)]  # dead board
             return [key(pygame.K_h)]
         return [pygame.event.Event(pygame.QUIT)]
     drive(script)
 
 
+def test_mode_key_cycles_and_starts_a_new_game():
+    def script(frame, st):
+        if frame in (1, 2):
+            return [key(pygame.K_c)]
+        return [pygame.event.Event(pygame.QUIT)]
+    st = drive(script)
+    keys = [g.mode.key for g in st['games']]
+    assert len(keys) == 3                 # one game at startup, one per press
+    assert keys[0] != keys[1]             # the press moved to the other mode
+    assert keys[2] == keys[0]             # and cycling wraps back around
+
+
 def test_completed_game_saved_once_after_last_cascade(tmp_path):
     from alchemy.scores import Scoreboard
     from alchemy.board import legal_moves
+    from alchemy.modes import DEFAULT_KEY
     queue = []
     def script(frame, st):
         game = st['games'][-1]
@@ -299,9 +312,9 @@ def test_completed_game_saved_once_after_last_cascade(tmp_path):
         return [pygame.event.Event(pygame.QUIT)]
     state = drive(script, argv=('--seed','7','--player','Tester','--scores-dir',str(tmp_path)))
     scores = Scoreboard(tmp_path)
-    assert len(scores.top(7)) == 1
-    assert scores.top(7)[0]['score'] == state['score']
-    assert scores.top() == []
+    assert len(scores.top(7, mode=DEFAULT_KEY)) == 1
+    assert scores.top(7, mode=DEFAULT_KEY)[0]['score'] == state['score']
+    assert scores.top(mode=DEFAULT_KEY) == []  # unseeded ranking is separate
     scores.close()
 
 

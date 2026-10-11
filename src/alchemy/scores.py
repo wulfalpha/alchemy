@@ -1,13 +1,40 @@
 """Offline, transactional scores, separated by mode and scoring rules."""
 from datetime import datetime, timezone
+from dataclasses import dataclass
 import os
 from pathlib import Path
 import sqlite3
 import sys
 
-RULES = 'shapes-v2'
-LEGACY_RULES = 'per-line-v1'
+RULES = 'shapes-v3'          # four-element Classic and Diagonal
+LEGACY_RULES = 'shapes-v2'   # retired five-element orthogonal play
+OLDEST_RULES = 'per-line-v1'
+# Released formula keys retained for compatibility; UI categories also include experiments.
+RULE_HISTORY = (RULES, LEGACY_RULES, OLDEST_RULES)
+RULE_LABELS = {RULES: 'Local high scores',
+               LEGACY_RULES: 'Legacy scores / five elements',
+               OLDEST_RULES: 'Legacy scores / per-line'}
 MODE = 'classic-30'
+
+
+@dataclass(frozen=True)
+class ScoreCategory:
+    label: str
+    mode: str
+    rules: str
+
+
+HISTORICAL_CATEGORIES = (
+    ScoreCategory('Five elements / straight swaps', MODE, LEGACY_RULES),
+    ScoreCategory('Legacy / per-line scoring', MODE, OLDEST_RULES),
+    ScoreCategory('Four-element experiment', MODE, 'four-elements-experiment-v1'),
+    ScoreCategory('Diagonal experiment / straight swaps', MODE, 'diagonals-experiment-v1'),
+)
+
+
+def score_categories(mode_key, mode_label):
+    """Current ranking first, then original historical partitions (never migrated)."""
+    return (ScoreCategory(f'{mode_label} / current', mode_key, RULES),) + HISTORICAL_CATEGORIES
 
 
 def clean_player(name):
