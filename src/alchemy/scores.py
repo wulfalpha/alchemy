@@ -34,7 +34,12 @@ HISTORICAL_CATEGORIES = (
 
 def score_categories(mode_key, mode_label):
     """Current ranking first, then original historical partitions (never migrated)."""
-    return (ScoreCategory(f'{mode_label} / current', mode_key, RULES),) + HISTORICAL_CATEGORIES
+    current = (ScoreCategory(f'{mode_label} / current', mode_key, RULES),)
+    if mode_key.startswith('adventure-'):
+        history = (() if mode_key == 'adventure-first-v1' else
+                   (ScoreCategory('First Transmutation / original rules', 'adventure-first-v1', RULES),))
+        return current + history
+    return current + HISTORICAL_CATEGORIES
 
 
 def clean_player(name):
@@ -61,7 +66,7 @@ class Scoreboard:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self.connection = sqlite3.connect(self.path, timeout=1)
             version = self.connection.execute('PRAGMA user_version').fetchone()[0]
-            if version not in (0, 1):
+            if version not in (0, 1, 2):
                 raise sqlite3.DatabaseError('Unsupported scoreboard version')
             with self.connection:
                 self.connection.execute('''CREATE TABLE IF NOT EXISTS scores (
@@ -69,7 +74,11 @@ class Scoreboard:
                     completed TEXT NOT NULL, mode TEXT NOT NULL, rules TEXT NOT NULL,
                     seed TEXT NOT NULL)''')
                 self.connection.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)')
-                self.connection.execute('PRAGMA user_version = 1')
+                columns = {row[1] for row in self.connection.execute('PRAGMA table_info(scores)')}
+                for column in ('material_left', 'swaps', 'stirs'):
+                    if column not in columns:
+                        self.connection.execute(f'ALTER TABLE scores ADD COLUMN {column} INTEGER')
+                self.connection.execute('PRAGMA user_version = 2')
         except (OSError, sqlite3.Error) as error:
             self._failed(error)
 
@@ -124,26 +133,33 @@ class Scoreboard:
         if self.connection is None:
             return []
         try:
-            rows = self.connection.execute('''SELECT player, score, completed, id FROM scores
+            rows = self.connection.execute('''SELECT player, score, completed, id, material_left, swaps, stirs FROM scores
                 WHERE seed=? AND mode=? AND rules=?
                 ORDER BY score DESC, completed ASC, id ASC LIMIT 10''',
                 ('' if seed is None else str(seed), mode, rules)).fetchall()
-            return [dict(player=p, score=s, completed=d, id=i) for p, s, d, i in rows]
+            return [dict(player=p, score=s, completed=d, id=i, material_left=m, swaps=w, stirs=t)
+                    for p, s, d, i, m, w, t in rows]
         except sqlite3.Error as error:
             self._failed(error)
             return []
 
-    def record(self, run_id, player, score, seed=None, mode=MODE, rules=RULES):
+    def record(self, run_id, player, score, seed=None, mode=MODE, rules=RULES,
+               *, material_left=None, swaps=None, stirs=None):
         if self.connection is None:
             return False
         if type(score) is not int or score < 0:
             raise ValueError('Score must be a nonnegative integer')
+        for value in (material_left, swaps, stirs):
+            if value is not None and (type(value) is not int or value < 0):
+                raise ValueError('Efficiency statistics must be nonnegative integers or None')
         player = clean_player(player)
         try:
             with self.connection:
-                self.connection.execute('INSERT OR IGNORE INTO scores VALUES (?, ?, ?, ?, ?, ?, ?)',
+                self.connection.execute('''INSERT OR IGNORE INTO scores
+                    (id, player, score, completed, mode, rules, seed, material_left, swaps, stirs)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                     (run_id, player, score, datetime.now(timezone.utc).isoformat(), mode, rules,
-                     '' if seed is None else str(seed)))
+                     '' if seed is None else str(seed), material_left, swaps, stirs))
             return True
         except sqlite3.Error as error:
             self._failed(error)

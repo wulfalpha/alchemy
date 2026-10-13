@@ -107,9 +107,15 @@ def run(args, scores):
     def score_seed():
         return game.seed if isinstance(game, AdventureGame) else args.seed
 
+    def score_mode():
+        return game.experiment.key if mode == ADVENTURE else mode.key
+
+    def categories():
+        return score_categories(score_mode(), mode.label)
+
     def reload_scores():
         nonlocal results
-        category = score_categories(mode.key, mode.label)[category_index]
+        category = categories()[category_index]
         results = scores.top(score_seed(), mode=category.mode, rules=category.rules)
 
     def start_new_game(animate=True):
@@ -187,7 +193,7 @@ def run(args, scores):
                     scores.set_reduced_motion(reduced_motion)
                     motion.finish()
                 elif event.key == pygame.K_TAB and show_scores:
-                    category_index = (category_index + 1) % len(score_categories(mode.key, mode.label))
+                    category_index = (category_index + 1) % len(categories())
                     reload_scores()
                 elif event.key == pygame.K_p:
                     editing_name = True
@@ -257,8 +263,10 @@ def run(args, scores):
                 audio.play(sound_event)
                 if (sound_event == 'game_over' and not score_saved
                         and (mode != ADVENTURE or game.outcome == 'success')):
+                    stats = (dict(material_left=game.material_left, swaps=game.turns, stirs=game.stirs)
+                             if mode == ADVENTURE else {})
                     score_saved = scores.record(run_id, args.player, game.score, score_seed(),
-                                                mode=mode.key)
+                                                mode=score_mode(), **stats)
                     reload_scores()
             clear_started = motion_time + (0 if reduced_motion else motion.duration)
             next_resolve = clear_started + 350
@@ -301,24 +309,26 @@ def run(args, scores):
         text(f'{game.score:,}', (658, 183), 48)
         text('POINTS', (664, 244), 14, MUTED)
         remaining = game.material_left if mode == ADVENTURE else game.moves
-        text(f'{remaining:02d}', (855, 183), 48)
+        text(str(remaining) if mode == ADVENTURE else f'{remaining:02d}', (855, 183), 48)
         text('MATERIAL LEFT' if mode == ADVENTURE else 'MOVES LEFT', (847, 244), 14, MUTED)
         if mode == ADVENTURE:
             text('Board tiles + reserves', (817, 264), 14, MUTED)
         pygame.draw.line(screen, (57, 68, 68), (662, 282), (982, 282))
         if mode == ADVENTURE:
             text(game.experiment.title, (662, 305), 24)
-            text(f'Target: {game.experiment.target:,} points', (PANEL, 350), 19, GOLD)
+            text(f'Target: {game.experiment.target:,} points', (PANEL, 341), 19, GOLD)
+            text(f'{game.points_remaining:,} points to go', (PANEL, 366), 14, MUTED)
             if sum(game.reserves):
-                text('Replacement reserves', (PANEL, 384), 14, MUTED)
+                text('Replacement reserves', (PANEL, 390), 14, MUTED)
             else:
-                text('Reserves exhausted', (PANEL, 376), 14, GOLD)
-                text('Use the remaining board.', (PANEL, 395), 14, MUTED)
+                text('Reserves exhausted', (PANEL, 387), 14, GOLD)
+                text('Use the remaining board.' if not game.finished else 'No reserves remain.',
+                     (PANEL, 406), 14, MUTED)
             for i, name in enumerate(mode.names):
                 text(f'{name.title()}: {game.reserves[i]}',
-                     (PANEL + (i % 2)*160, 418+(i//2)*28), 16)
-            text(f'Used: {game.consumed}   Swaps: {game.turns}   No move limit',
-                 (PANEL, 474), 14, MUTED)
+                     (PANEL + (i % 2)*160, 429+(i//2)*25), 16)
+            text(f'Used: {game.consumed}   Swaps: {game.turns}   Stirs: {game.stirs}',
+                 (PANEL, 478), 14, MUTED)
         else:
             text('The practice', (662, 305), 24)
             for i, line in enumerate(mode.practice):
@@ -354,36 +364,48 @@ def run(args, scores):
             if score_saved and results and results[0]['id'] == run_id:
                 status = 'New local high score!'
             if mode == ADVENTURE and game.outcome == 'stalled':
-                status = 'No playable layout found. Try again!'
+                status = game.failure_summary
             text(status, (110, 425), 16, GOLD)
             if mode == ADVENTURE:
-                text(f'Reactants consumed: {game.consumed}', (122, 463), 16)
-                text(f'Successful swaps: {game.turns}', (122, 489), 16)
-                text('L: view scores    R: retry experiment', (122, 535), 16)
+                if game.outcome == 'stalled':
+                    text(f'{game.points_remaining:,} points short / {game.material_left} material left',
+                         (122, 452), 16, GOLD)
+                else:
+                    text(f'Material left: {game.material_left}', (122, 452), 16, GOLD)
+                text(f'Reactants consumed: {game.consumed}', (122, 478), 16)
+                text(f'Successful swaps: {game.turns} / Stirs: {game.stirs}', (122, 504), 16)
+                text('L: view scores    R: retry experiment', (122, 548), 16)
             else:
                 text('L: view scores    R: new experiment', (122, 465), 16)
         if show_scores:
             panel = pygame.Rect(LEFT, TOP, SIZE*TILE, SIZE*TILE)
             pygame.draw.rect(screen, (20, 33, 40), panel, border_radius=12)
-            category = score_categories(mode.key, mode.label)[category_index]
+            category = categories()[category_index]
             text('Local high scores' if category_index == 0 else 'Historical high scores', (80, 175), 24, GOLD)
             text(category.label, (80, 215), 16, MUTED)
             seed_label = 'Unseeded / 30 moves' if score_seed() is None else f'Seed {score_seed()}'
             text(seed_label[:48], (80, 235), 14, MUTED)
             text('PLAYER', (80, 252), 14, MUTED)
             text('POINTS', (340, 252), 14, MUTED)
-            text('DATE (UTC)', (440, 252), 14, MUTED)
+            if mode != ADVENTURE:
+                text('DATE (UTC)', (440, 252), 14, MUTED)
             for index, entry in enumerate(results):
-                y = 282 + index * 33
+                y = 282 + index * (34 if mode == ADVENTURE else 33)
                 name = f'{index+1:2}. {entry["player"]}'
                 while fonts[16].size(name)[0] > 240:
                     name = name[:-2] + '~'
                 text(name, (80, y), 16, GOLD if entry['id'] == run_id else TEXT)
                 text(f'{entry["score"]:,}', (340, y), 16, GOLD)
-                text(entry['completed'][:10], (440, y), 14, MUTED)
+                if mode == ADVENTURE:
+                    stats = ('Efficiency stats unavailable' if entry['material_left'] is None else
+                             f"Left: {entry['material_left']} / Swaps: {entry['swaps']} / Stirs: {entry['stirs']}")
+                    text(stats, (108, y+19), 14, MUTED)
+                else:
+                    text(entry['completed'][:10], (440, y), 14, MUTED)
             if not results:
                 text('Complete an experiment to set a score.', (80, 300), 19)
-            text('Tab: current and legacy scoring', (80, 630), 16, GOLD)
+            text('Tab: current and original experiment' if mode == ADVENTURE else
+                 'Tab: current and legacy scoring', (80, 630), 16, GOLD)
             text('L or Esc to return to your experiment', (80, 658), 16, MUTED)
         if scores.error:
             text('Local scores unavailable; your game can continue.', (48, 735), 16, GOLD)

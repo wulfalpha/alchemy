@@ -438,3 +438,21 @@ Ten random-play runs of the default seed continued to exhaustion scored
 3,600–4,450 points. The 3,500 target is an introductory tuning choice, not a
 claim of balanced difficulty. Next: human playtesting of pacing, the reserve
 display, stirring frequency, and the final sparse board before adding recovery.
+
+### Adventure follow-up (2026-10-12)
+
+Implemented clearer material-exhaustion versus stir-search failure messages,
+points remaining/shortfall, stir counts, and a bounded constructive fallback for
+5–16 tiles after random stirring fails. The fallback preserves inventory, gravity,
+and stable-board rules; search failure is not proof of impossibility.
+
+Scores now store nullable material-left, successful-swap, and stir statistics.
+Schema version 2 preserves prior scores and settings without inventing statistics.
+Adventure only browses its own current and original experiment categories; Classic
+and Diagonal history remains accessible. Saving uses Experiment.key; the changed
+stir policy is revision adventure-first-v2. The original launch option is retained.
+A definition regression test guards the released kit and objective.
+
+The 3,500 target, point ranking, free stirs, and no-refund policy remain unchanged.
+Efficiency grades, notebook/experiment selection, further objectives, and versioned
+run saving are deferred until this feedback and record collection is playtested.

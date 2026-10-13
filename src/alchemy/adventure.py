@@ -8,7 +8,7 @@ from .modes import ADVENTURE
 
 @dataclass(frozen=True)
 class Experiment:
-    key: str = ADVENTURE.key
+    key: str = 'adventure-first-v2'
     title: str = 'First Transmutation'
     target: int = 3500
     reserves: tuple = (20, 20, 20, 20)
@@ -41,6 +41,58 @@ def finite_refill(grid, cleared, reserves, rng):
             grid[y][x] = value
 
 
+def sparse_layout(tiles, mode=ADVENTURE):
+    """Build a stable sparse board around a guaranteed horizontal swap.
+
+    Bounded backtracking fills compact columns above A A A B A. Failure is
+    inconclusive; callers must not describe it as proof of impossibility.
+    """
+    if not 5 <= len(tiles) <= 16:
+        return None
+    counts = Counter(tiles)
+    budget = 5000
+    for element in sorted(counts):
+        if counts[element] < 4:
+            continue
+        for other in sorted(counts):
+            if other == element:
+                continue
+            remaining = counts.copy()
+            remaining[element] -= 4
+            remaining[other] -= 1
+            grid = [[None]*SIZE for _ in range(SIZE)]
+            grid[-1][:5] = [element, element, element, other, element]
+            heights = [1]*5 + [0]*3
+
+            def fill(left):
+                nonlocal budget
+                budget -= 1
+                if budget < 0:
+                    return False
+                if not left:
+                    return bool(legal_moves(grid, mode))
+                for value in sorted(remaining, key=lambda v: (-remaining[v], v)):
+                    if not remaining[value]:
+                        continue
+                    for x in sorted(range(SIZE), key=lambda x: (heights[x], x)):
+                        if heights[x] == SIZE:
+                            continue
+                        y = SIZE-1-heights[x]
+                        grid[y][x] = value
+                        heights[x] += 1
+                        remaining[value] -= 1
+                        if not matches(grid, mode) and fill(left-1):
+                            return True
+                        remaining[value] += 1
+                        heights[x] -= 1
+                        grid[y][x] = None
+                return False
+
+            if fill(len(tiles)-5):
+                return grid
+    return None
+
+
 def stir(grid, rng, mode=ADVENTURE, attempts=200):
     """Bounded search for a stable playable rearrangement of existing material."""
     tiles = [value for row in grid for value in row if value is not None]
@@ -61,6 +113,10 @@ def stir(grid, rng, mode=ADVENTURE, attempts=200):
         if not matches(candidate, mode) and legal_moves(candidate, mode):
             grid[:] = candidate
             return True
+    candidate = sparse_layout(tiles, mode)
+    if candidate is not None:
+        grid[:] = candidate
+        return True
     return False
 
 
@@ -71,6 +127,7 @@ class AdventureGame(Game):
         super().__init__(self.seed, ADVENTURE)
         self.reserves = list(experiment.reserves)
         self.outcome = None
+        self.failure_reason = None
         self.consumed = 0
         self.turns = 0
         self.stirs = 0
@@ -80,6 +137,16 @@ class AdventureGame(Game):
     @property
     def finished(self):
         return self.outcome is not None
+
+    @property
+    def points_remaining(self):
+        return max(0, self.experiment.target-self.score)
+
+    @property
+    def failure_summary(self):
+        if self.failure_reason == 'insufficient_material':
+            return 'Too few of each element for another match.'
+        return 'Stir could not find a playable arrangement.'
 
     @property
     def material_left(self):
@@ -108,6 +175,9 @@ class AdventureGame(Game):
                 events.append('shuffle')
             else:
                 self.outcome = 'stalled'
-                self.message = 'Experiment stalled: no playable layout found. Press R to retry.'
+                counts = Counter(v for row in self.grid for v in row if v is not None)
+                self.failure_reason = ('insufficient_material' if max(counts.values(), default=0) < 4
+                                       else 'search_exhausted')
+                self.message = f'{self.failure_summary} {self.points_remaining:,} points short.'
         if self.finished:
             events.append('game_over')

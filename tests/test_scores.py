@@ -91,3 +91,34 @@ def test_player_name_remembered_without_changing_scores(tmp_path):
     assert scores.top()[0]['player'] == 'Old name'
     assert scores.set_player(' ') == 'Alchemist'
     scores.close()
+
+
+def test_migrate_original_database_preserves_scores_and_settings(tmp_path):
+    import sqlite3
+    with sqlite3.connect(tmp_path / 'scores.sqlite3') as db:
+        db.execute('CREATE TABLE scores (id TEXT PRIMARY KEY, player TEXT NOT NULL, score INTEGER NOT NULL, completed TEXT NOT NULL, mode TEXT NOT NULL, rules TEXT NOT NULL, seed TEXT NOT NULL)')
+        db.execute('CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)')
+        db.execute("INSERT INTO settings VALUES ('player', 'Ada')")
+        db.execute("INSERT INTO scores VALUES ('old', 'Ada', 3500, '2026-10-10', 'adventure-first-v1', 'shapes-v3', '42')")
+        db.execute('PRAGMA user_version = 1')
+    scores = Scoreboard(tmp_path)
+    assert scores.error is None and scores.player() == 'Ada'
+    old = scores.top(42, mode='adventure-first-v1')[0]
+    assert old['score'] == 3500
+    assert old['material_left'] is old['swaps'] is old['stirs'] is None
+    assert scores.record('new', 'Ada', 3600, 42, mode='adventure-first-v2', material_left=40, swaps=15, stirs=2)
+    scores.close()
+    scores = Scoreboard(tmp_path)
+    new = scores.top(42, mode='adventure-first-v2')[0]
+    assert (new['material_left'], new['swaps'], new['stirs']) == (40, 15, 2)
+    assert len(scores.top(42, mode='adventure-first-v1')) == 1
+    scores.close()
+
+
+def test_adventure_categories_do_not_expose_classic_history():
+    from alchemy.scores import score_categories
+    categories = score_categories('adventure-first-v2', 'Adventure')
+    assert [c.mode for c in categories] == ['adventure-first-v2', 'adventure-first-v1']
+    assert len(score_categories('adventure-first-v1', 'Adventure')) == 1
+    assert len(score_categories('classic-30', 'Classic')) == 5
+    assert len(score_categories('diagonal-30', 'Diagonal')) == 5

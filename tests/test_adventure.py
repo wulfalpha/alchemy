@@ -117,3 +117,55 @@ def test_sparse_fall_tracks_existing_survivors():
     motion.fall({(0, 7)}, 0, grid)
     assert motion.offset(0, 6, 0) == (0, -1)
     assert motion.offset(0, 7, 0) == (0, -1)
+
+
+def test_sparse_fallback_recovers_known_false_stall_without_spending_material():
+    from alchemy.adventure import sparse_layout
+    tiles = [0]*3 + [2]*4 + [3]*2
+    grid = [[None]*8 for _ in range(8)]
+    grid[-1][:8] = tiles[:8]
+    grid[-2][0] = tiles[8]
+    before = inventory(grid)
+    assert stir(grid, Random(32), attempts=0)
+    assert inventory(grid) == before
+    assert not matches(grid) and legal_moves(grid)
+    assert grid == sparse_layout(tiles)
+    for x in range(8):
+        column = [row[x] for row in grid]
+        assert column[:column.count(None)] == [None]*column.count(None)
+
+
+@pytest.mark.parametrize('tiles', [[0]*4+[1], [0]*12+[1]*4, [0]*4+[1]*4+[2]*4+[3]*4])
+def test_constructed_sparse_boards_are_stable_and_playable(tiles):
+    from alchemy.adventure import sparse_layout
+    grid = sparse_layout(tiles)
+    assert grid is not None
+    assert inventory(grid) == Counter(tiles)
+    assert not matches(grid) and legal_moves(grid)
+
+
+def test_failure_reasons_distinguish_material_from_search_limit():
+    game = AdventureGame()
+    game.reserves = [0]*4
+    game.grid = [[None]*8 for _ in range(8)]
+    game.grid[-1][:3] = [0, 1, 2]
+    game._settle([])
+    assert game.failure_reason == 'insufficient_material'
+    assert game.points_remaining == 3500
+    assert 'Too few' in game.failure_summary
+    # Four identical tiles cannot create a stable legal swap, but the search
+    # result alone is not used as a proof of impossibility.
+    game = AdventureGame(experiment=replace(FIRST_EXPERIMENT, stir_attempts=0))
+    game.grid = [[None]*8 for _ in range(8)]
+    for x in (0, 2, 4, 6):
+        game.grid[-1][x] = 0
+    game._settle([])
+    assert game.failure_reason == 'search_exhausted'
+    assert 'could not find' in game.failure_summary
+
+
+def test_released_experiment_definition_requires_a_new_revision_for_changes():
+    from dataclasses import asdict
+    assert asdict(FIRST_EXPERIMENT) == dict(
+        key='adventure-first-v2', title='First Transmutation', target=3500,
+        reserves=(20, 20, 20, 20), seed=42, stir_attempts=200)

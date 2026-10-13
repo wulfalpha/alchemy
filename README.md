@@ -75,16 +75,25 @@ When reserves run out, empty spaces remain and cannot be swapped.
 
 The complete cascade scores before success is checked. If no swaps remain,
 the game tries up to 200 rearrangements of the existing material. No new tiles
-are created by stirring. If none works, the experiment stalls; **R** retries.
+are created by stirring. If random stirring fails with at most 16 tiles, a bounded
+constructive search tries arranging them around a legal swap. If neither succeeds,
+the experiment stalls; **R** retries. The ending distinguishes insufficient matching
+material from an unsuccessful layout search and shows the points shortfall.
 The sidebar shows your target, reserves, material remaining (board tiles plus
 reserves), and material used. A notice explains when reserves run out. Both
 successful and stalled experiments show points, reactants consumed, and successful
-swaps; **R** retries the same experiment.
+swaps and stirs; **R** retries the same experiment. The sidebar also shows points
+still needed and the stir count.
 
 This first experiment defaults to seed **42** so retries repeat the same kit and
 random sequence. Use `--seed` for other starting conditions. Successful experiments
 save locally under their own experiment revision and seed; stalled and abandoned
-attempts do not enter the leaderboard. The initial target is for playtesting;
+attempts do not enter the leaderboard. New results include material left, swaps,
+and stirs. Rankings still use points while we collect data for future efficiency
+grades. The improved stir uses experiment revision `adventure-first-v2`; **Tab**
+in Adventure scores shows the original revision separately, with unavailable
+efficiency statistics clearly labeled. The launch option remains
+`adventure-first-v1` for compatibility. The initial target is for playtesting;
 campaign progression and reactant recovery are future work.
 
 Earlier five-element, straight-lines-only play is retired. Scores set under those rules are

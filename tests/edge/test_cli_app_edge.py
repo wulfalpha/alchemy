@@ -380,6 +380,11 @@ def test_adventure_completion_records_only_success_with_effective_seed(tmp_path,
 
     drive(script, argv=('--mode', ADVENTURE.key, '--scores-dir', str(tmp_path)))
     scores = Scoreboard(tmp_path)
-    assert len(scores.top(42, mode=ADVENTURE.key)) == int(succeed)
-    assert scores.top(None, mode=ADVENTURE.key) == []
+    from alchemy.adventure import FIRST_EXPERIMENT
+    rows = scores.top(42, mode=FIRST_EXPERIMENT.key)
+    assert len(rows) == int(succeed)
+    if succeed:
+        assert rows[0]['material_left'] == 0
+        assert rows[0]['swaps'] == rows[0]['stirs'] == 0
+    assert scores.top(None, mode=FIRST_EXPERIMENT.key) == []
     scores.close()
