@@ -259,7 +259,7 @@ The rules layer is solid. Over 300 seeded games of random play, no invariant bro
 ## Packaging, docs, and UX
 - **PyPI name: resolved.** `alchemy` on PyPI belongs to catalyst-team (an unrelated experiment-logging library, versions 20.4 and 20.5), so the distribution name is now `alchemy-game`, which was free on PyPI as of 2026-10-08. PyPI does not reserve names, so it is only claimed once a first release is uploaded. The `alchemy` import and command names are unchanged.
 - **License: resolved.** The project is MIT-licensed. `LICENSE` reads "Copyright (c) 2026 Andrew Davidson". `pyproject.toml` uses the PEP 639 fields `license = "MIT"` and `license-files = ["LICENSE"]`, which uv_build 0.12.23 supports: the built wheel has `License-Expression: MIT` and ships `LICENSE`. The license covers the code and the generated symbol art.
-- **`img/AoA_symbols.pdf`** is a third-party-looking reference (an Adobe InDesign 2015 export). The README already says rights haven't been reviewed. Since the repo is public, consider removing it, or confirm you're allowed to redistribute it.
+- ~~**`img/AoA_symbols.pdf`**~~ (resolved 2026-10-14): it was a copy of the Getty Research Institute's Alchemical Symbols sheet. It has been removed from the repo, and the README now links to Getty's copy instead.
 - **CI: resolved.** `.github/workflows/ci.yml` runs the full pytest suite and a headless smoke test on Ubuntu with Python 3.12 and 3.13, on every push and PR to `main`. Plain `pytest` already works without `PYTHONPATH`, because `tests/conftest.py` adds `src/`. Still optional: a `[dependency-groups] dev = ["pytest"]` entry, so `--with pytest` isn't needed.
 - **The sdist leaves out `tests/`, `tools/`, and `sounds/README.md`.** Include tests if you want downstream packagers to run them.
 - **README:** document the exact scoring formula once bug 1 is settled, with a worked example. Say that R with `--seed` repeats the same board. Mention that the window is a fixed 1040×780 (a resizable or scaled window would help on small laptop screens).
@@ -271,7 +271,7 @@ The rules layer is solid. Over 300 seeded games of random play, no invariant bro
 3. Validate `--screenshot` early, and catch `set_mode` failures, so no user-facing tracebacks remain.
 4. Add `Game.hint()` and make `resolve()` always return a list.
    - After each of fixes 1–4, remove the matching `xfail` marker in `tests/edge/`.
-5. ~~Add CI and a LICENSE~~ (done). Still to do: review whether to keep `AoA_symbols.pdf` in the public repo. It isn't shipped in the sdist or wheel. Optionally add a wheel-install test to CI.
+5. ~~Add CI and a LICENSE~~ (done). Getty reference PDF removed and linked instead. Optionally add a wheel-install test to CI.
 6. Release 0.1.0 as `alchemy-game` once you've done the one-time PyPI setup under "Releasing" below. The PyPI name item is resolved: `alchemy` belongs to catalyst-team.
 7. Refactor `app.main()` into testable pieces, then add UI-logic tests.
 

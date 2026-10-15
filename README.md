@@ -109,7 +109,7 @@ Optional sound hooks are ready. Drop WAV or OGG effects into `sounds/` using the
 
 ## Artwork
 
-`img/AoA_symbols.pdf` is a visual reference supplied with the project. The game does not extract or display artwork from that PDF.
+The symbols were drawn with the Getty Research Institute's [Alchemical Symbols](https://www.getty.edu/research/exhibitions_events/exhibitions/alchemy/AoA_symbols.pdf) sheet as a visual reference. That sheet is Getty's and is not included in this repository.
 
 The five transparent PNGs in `img/` are fresh geometric drawings of traditional fire, water, air, earth, and sun symbols. Replace `fire.png`, `water.png`, `air.png`, `earth.png`, or `sun.png` to customize the game. Square transparent images work best; they display at 48 × 48 pixels.
 
