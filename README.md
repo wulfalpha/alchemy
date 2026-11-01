@@ -33,7 +33,7 @@ uv run alchemy
 
 Or install into your Python environment with `python -m pip install -e .`, then run `alchemy`.
 
-- Click a symbol, then an adjacent symbol to swap them.
+- Click a symbol, then an adjacent symbol to swap them. To play from the keyboard, press an arrow key to show a cursor, move it with the arrows, and press **Enter** or **Space** where you would click. **Esc** clears a selection before it quits.
 - Match **four or more** identical symbols horizontally or vertically. Diagonals and groups without a four-symbol line do not clear.
 - Valid swaps use one of your 30 moves. Invalid swaps are reversed for free.
 - Cleared tiles refill from above; further matches produce cascades.

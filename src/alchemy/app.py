@@ -74,6 +74,10 @@ def main():
         pygame.quit()
 
 
+ARROWS = {pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0), pygame.K_UP: (0, -1), pygame.K_DOWN: (0, 1)}
+ACTIVATE = (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE)
+
+
 class Session:
     """Everything the window remembers between frames: the game, overlays, and timing.
 
@@ -102,6 +106,7 @@ class Session:
         self.results = []
         self.selected = self.hint = None
         self.confirming = None   # 'restart' or 'mode' while asking to abandon a game
+        self.cursor = None       # keyboard cell; appears with the first arrow key
         self.running = True
         self.start_new_game(animate=not args.smoke_test)
 
@@ -227,8 +232,14 @@ class Session:
         if event.key == pygame.K_ESCAPE:
             if self.show_scores:
                 self.show_scores = False
+            elif self.selected is not None:
+                self.selected = None
             else:
                 self.running = False
+        elif event.key in ARROWS:
+            self.move_cursor(*ARROWS[event.key])
+        elif event.key in ACTIVATE and self.cursor is not None and self.can_act():
+            self.press_cell(self.cursor)
         elif event.key == pygame.K_a:
             self.reduced_motion = not self.reduced_motion
             self.scores.set_reduced_motion(self.reduced_motion)
@@ -251,6 +262,7 @@ class Session:
 
     def handle_click(self, pos):
         confirming, self.confirming = self.confirming, None
+        self.cursor = None
         if PLAYER_BUTTON.collidepoint(pos):
             self.open_name_editor()
         elif SCORES_BUTTON.collidepoint(pos):
@@ -262,8 +274,22 @@ class Session:
         elif self.can_act():
             x = int((pos[0] - LEFT) // TILE)
             y = int((pos[1] - TOP) // TILE)
-            if 0 <= x < SIZE and 0 <= y < SIZE and self.game.grid[y][x] is not None:
-                self.select((x, y))
+            if 0 <= x < SIZE and 0 <= y < SIZE:
+                self.press_cell((x, y))
+
+    def move_cursor(self, dx, dy):
+        """Show the keyboard cursor, or step it one cell, stopping at the board's edge."""
+        if self.cursor is None:
+            self.cursor = self.selected or (SIZE // 2 - 1, SIZE // 2 - 1)
+        else:
+            x, y = self.cursor
+            self.cursor = (min(SIZE - 1, max(0, x + dx)), min(SIZE - 1, max(0, y + dy)))
+
+    def press_cell(self, cell):
+        """A click or Enter on a board cell; empty Adventure cells do nothing."""
+        x, y = cell
+        if self.game.grid[y][x] is not None:
+            self.select(cell)
 
     def select(self, cell):
         """First click picks a symbol; a click on a neighbor tries the swap."""

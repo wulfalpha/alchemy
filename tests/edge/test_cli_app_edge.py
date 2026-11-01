@@ -462,3 +462,82 @@ def test_mode_help_lists_only_current_names():
     assert run('--smoke-test', '--mode', 'adventure-first-v1').returncode == 0
     bad = run('--mode', 'adventure-first-v9')
     assert bad.returncode == 2 and "invalid choice: 'adventure-first-v9'" in bad.stderr
+
+
+def test_keyboard_cursor_selects_and_swaps_like_clicks():
+    from alchemy.board import legal_moves
+    arrows = {(1, 0): pygame.K_RIGHT, (-1, 0): pygame.K_LEFT, (0, 1): pygame.K_DOWN, (0, -1): pygame.K_UP}
+
+    def walk(src, dst):
+        steps = []
+        for axis, (plus, minus) in ((0, ((1, 0), (-1, 0))), (1, ((0, 1), (0, -1)))):
+            delta = dst[axis] - src[axis]
+            steps += [key(arrows[plus if delta > 0 else minus])] * abs(delta)
+        return steps
+
+    def script(frame, st):
+        g = st['games'][-1]
+        if frame == 2:
+            (a, b) = st['move'] = legal_moves(g.grid)[0]
+            st['moves_before'] = g.moves
+            # First arrow only reveals the cursor at (3, 3); then walk to a, select, step to b, swap.
+            return ([key(pygame.K_UP)] + walk((3, 3), a) + [key(pygame.K_RETURN)]
+                    + walk(a, b) + [key(pygame.K_SPACE)])
+        if frame == 3:
+            st['moves_after'] = g.moves
+        return [pygame.event.Event(pygame.QUIT)] if frame > 3 else []
+
+    st = drive(script)
+    assert st['moves_after'] == st['moves_before'] - 1
+
+
+def _capture_session():
+    """Patch Session so a test can read the live UI state; returns (patcher, holder)."""
+    import alchemy.app as app
+    holder = {}
+    original = app.Session.__init__
+
+    def init(self, *a, **k):
+        original(self, *a, **k)
+        holder['session'] = self
+    return patch.object(app.Session, '__init__', init), holder
+
+
+def test_cursor_stays_on_board_and_enter_without_cursor_does_nothing():
+    patcher, holder = _capture_session()
+    seen = {}
+
+    def script(frame, st):
+        s = holder['session']
+        if frame == 2:
+            return [key(pygame.K_RETURN), key(pygame.K_SPACE)]  # no cursor yet
+        if frame == 3:
+            seen['before'] = (s.cursor, s.selected)
+            return [key(pygame.K_LEFT)] + [key(pygame.K_UP)] * 12 + [key(pygame.K_LEFT)] * 12 + [key(pygame.K_RETURN)]
+        if frame == 4:
+            seen['corner'] = (s.cursor, s.selected)
+            return [click((5, 5))]
+        if frame == 5:
+            seen['after_click'] = (s.cursor, s.selected)
+        return [pygame.event.Event(pygame.QUIT)] if frame > 5 else []
+    with patcher:
+        drive(script)
+    assert seen['before'] == (None, None)
+    assert seen['corner'] == ((0, 0), (0, 0))       # clamped at the corner, Enter selected it
+    assert seen['after_click'] == (None, (5, 5))    # a click hides the cursor
+
+
+def test_escape_deselects_before_quitting():
+    patcher, holder = _capture_session()
+    seen = {}
+
+    def script(frame, st):
+        if frame == 2:
+            return [click((0, 0)), key(pygame.K_ESCAPE)]
+        if frame == 3:
+            seen['selected'] = holder['session'].selected
+            return [key(pygame.K_ESCAPE)]
+        return []
+    with patcher:
+        st = drive(script)
+    assert seen['selected'] is None and st['frame'] == 3  # first Esc deselected; second quit

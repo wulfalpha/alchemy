@@ -219,6 +219,10 @@ def draw_board(canvas, session):
                 pygame.draw.rect(screen, GOLD, rect.inflate(4, 4), 3, border_radius=12)
             if pending:
                 canvas.shade(rect, (255, 234, 173, 95))
+    if session.cursor is not None:
+        x, y = session.cursor
+        cell = pygame.Rect(LEFT+x*TILE+3, TOP+y*TILE+3, TILE-6, TILE-6)
+        pygame.draw.rect(screen, TEXT, cell.inflate(10, 10), 2, border_radius=14)
     screen.set_clip(None)
 
 
