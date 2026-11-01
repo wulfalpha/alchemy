@@ -1,6 +1,6 @@
 [project]
 name = "alchemy-game"
-version = "0.1.6"
+version = "0.1.7"
 description = "An alchemical match-four puzzle game built with Pygame"
 readme = "README.md"
 authors = [
@@ -31,6 +31,7 @@ classifiers = [
 Homepage = "https://github.com/wulfalpha/alchemy"
 Repository = "https://github.com/wulfalpha/alchemy"
 Issues = "https://github.com/wulfalpha/alchemy/issues"
+Changelog = "https://github.com/wulfalpha/alchemy/blob/main/CHANGELOG.md"
 
 [project.scripts]
 alchemy = "alchemy:main"
