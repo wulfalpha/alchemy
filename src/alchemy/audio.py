@@ -37,10 +37,11 @@ class Audio:
         if directory is not None and not Path(directory).is_dir():
             logging.warning('Sound directory does not exist: %s', directory)
         roots = [root for root in roots if root is not None and root.is_dir()]
+        listings = [sorted((p for p in root.iterdir() if p.is_file()), key=lambda p: p.name) for root in roots]
         for event in EVENTS:
-            for root in roots:
+            for listing in listings:
                 for extension in ('.wav', '.ogg'):
-                    candidates = sorted((p for p in root.iterdir() if p.name.lower() == event + extension and p.is_file()), key=lambda p: p.name)
+                    candidates = [p for p in listing if p.name.lower() == event + extension]
                     if not candidates:
                         continue
                     path = candidates[0]
