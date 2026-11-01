@@ -29,8 +29,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
+      - name: Lint (ruff)
+        run: uv run --locked ruff check
       - name: Full test suite (pytest, headless)
-        run: uv run --locked --with pytest pytest -q
+        run: uv run --locked pytest -q
       - name: Headless smoke test
         run: uv run --locked alchemy --smoke-test --seed 42
       - name: Build and test installed wheel

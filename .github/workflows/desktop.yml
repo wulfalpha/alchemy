@@ -29,7 +29,7 @@ jobs:
         env:
           SDL_VIDEODRIVER: dummy
           SDL_AUDIODRIVER: dummy
-        run: uv run --locked --group build --with pytest pytest -q
+        run: uv run --locked --group build pytest -q
       - name: Build and smoke-test portable app
         run: uv run --locked --group build python tools/build_desktop.py
       - name: Scan Windows bundle and archive with Defender

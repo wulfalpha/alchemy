@@ -10,7 +10,7 @@ from random import Random
 import pytest
 
 from alchemy import board
-from alchemy.board import (Game, SIZE, KINDS, PLUS_BONUS, legal_moves, matches,
+from alchemy.board import (Game, SIZE, KINDS, legal_moves, matches,
                            new_grid, plus_centers, refill, swap)
 
 

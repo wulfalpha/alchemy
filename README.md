@@ -132,10 +132,11 @@ PYTHONPATH=src python -m unittest discover -s tests -v
 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy PYTHONPATH=src python -m alchemy --smoke-test --seed 42 --screenshot /tmp/alchemy.png
 ```
 
-The full suite, including the edge-case tests in `tests/edge/`, needs pytest:
+The full suite, including the edge-case tests in `tests/edge/`, needs pytest. `uv run` installs the pinned `dev` group (pytest and ruff) automatically:
 
 ```sh
-SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run --with pytest pytest -q
+SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run pytest -q
+uv run ruff check
 ```
 
 Use `alchemy --seed 42` for a reproducible game.
@@ -154,9 +155,9 @@ Hints cycle through valid swaps without changing future tiles. With `--seed`, re
 
 Use `--assets-dir /path/to/images` for custom PNGs in installed copies. Invalid custom art falls back to packaged symbols with a warning. `--screenshot` supports PNG, JPG, and BMP; extensionless paths get `.png`. The output directory must already exist.
 
-Regenerating existing artwork requires `python tools/draw_symbols.py --force`. This overwrites both custom and packaged defaults.
+Regenerating existing artwork requires `python tools/draw_symbols.py --force`. This overwrites the packaged defaults in `src/alchemy/assets/`.
 
-Run the full regression suite with `uv run --with pytest pytest -q`.
+Run the full regression suite with `uv run pytest -q`.
 
 ## Offline high scores
 

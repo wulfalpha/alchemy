@@ -1,8 +1,6 @@
 """Edge-case tests for alchemy.audio."""
 import logging
-import os
 import wave
-from pathlib import Path
 from unittest.mock import patch
 
 import pygame
