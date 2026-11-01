@@ -106,7 +106,6 @@ def run_copy(repo, *args):
 
 
 def test_missing_custom_image_falls_back(repo_copy):
-    (repo_copy / 'img' / 'fire.png').unlink()
     assert run_copy(repo_copy, '--smoke-test').returncode == 0
 
 
@@ -129,7 +128,6 @@ def test_empty_custom_image_falls_back(repo_copy):
 
 
 def test_directory_named_like_image_falls_back(repo_copy):
-    (repo_copy / 'img' / 'air.png').unlink()
     (repo_copy / 'img' / 'air.png').mkdir()
     r = run_copy(repo_copy, '--smoke-test')
     assert r.returncode == 0, 'img/air.png being a directory crashes startup (exists() vs is_file())'

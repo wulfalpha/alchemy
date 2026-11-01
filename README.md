@@ -113,9 +113,9 @@ Every event has a built-in metal or glass tone (bells, clanks, clinking vials), 
 
 The symbols were drawn with the Getty Research Institute's [Alchemical Symbols](https://www.getty.edu/research/exhibitions_events/exhibitions/alchemy/AoA_symbols.pdf) sheet as a visual reference. That sheet is Getty's and is not included in this repository.
 
-The five transparent PNGs in `img/` are fresh geometric drawings of traditional fire, water, air, earth, and sun symbols. Replace `fire.png`, `water.png`, `air.png`, `earth.png`, or `sun.png` to customize the game. Square transparent images work best; they display at 48 × 48 pixels.
+The built-in symbols in `src/alchemy/assets/` are fresh geometric drawings of traditional fire, water, air, earth, and sun symbols. To customize them in a source checkout, drop replacement `fire.png`, `water.png`, `air.png`, `earth.png`, or `sun.png` files into `img/` (see [img/README.md](https://github.com/wulfalpha/alchemy/blob/main/img/README.md)); installed copies can use `--assets-dir`. Square transparent images work best; they display at 48 × 48 pixels.
 
-`python tools/draw_symbols.py` regenerates the default images in both `img/` and `src/alchemy/assets/`. The latter provides packaged fallback assets for installed builds. Copy custom images there as well before building a distribution.
+`python tools/draw_symbols.py --force` regenerates the built-in images in `src/alchemy/assets/`. To ship custom artwork in a distribution, replace the files there before building.
 
 This is an independent prototype. No affiliation with an earlier game is implied; naming and distribution rights have not been legally reviewed.
 
