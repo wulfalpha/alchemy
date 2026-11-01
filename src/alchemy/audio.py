@@ -3,6 +3,7 @@
 With `tones=True`, events without a sound file fall back to the built-in tones
 from `synth.py`; files always win. `sounds` holds only the files that loaded.
 """
+import ctypes
 import io
 import logging
 import math
@@ -15,6 +16,17 @@ import pygame
 
 EVENTS = ('select', 'swap', 'invalid', 'match', 'cascade', 'plus',
           'l_shape', 't_shape', 'hint', 'shuffle', 'restart', 'game_over')
+
+
+def keep_forever(sound):
+    """Never deallocate an empty Sound.
+
+    SDL_mixer 2.8 loads a zero-length clip with realloc(buffer, 0), which frees
+    the buffer on glibc while the chunk keeps the pointer; Mix_FreeChunk then
+    frees it again and aborts the process on Linux. Holding one extra reference
+    that is never released means that free never happens. The leak is a few bytes.
+    """
+    ctypes.pythonapi.Py_IncRef(ctypes.py_object(sound))
 
 
 class Audio:
@@ -48,6 +60,10 @@ class Audio:
                     try:
                         with path.open('rb') as stream:
                             sound = pygame.mixer.Sound(file=stream)
+                        if not sound.get_length():
+                            keep_forever(sound)
+                            logging.warning('Cannot load sound %s: it contains no audio', path)
+                            continue
                         sound.set_volume(max(0.0, min(1.0, volume)))
                         self.sounds[event] = sound
                         break

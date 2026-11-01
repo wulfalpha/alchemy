@@ -62,6 +62,23 @@ def test_empty_and_zero_frame_files(tmp_path):
     write_wav(tmp_path / 'swap.wav', frames=0)
     a = Audio(tmp_path)
     assert 'select' not in a.sounds  # skipped with warning, no crash
+    assert 'swap' not in a.sounds    # an empty clip is useless and is skipped too
+
+
+def test_empty_clip_is_never_freed(tmp_path):
+    """SDL_mixer 2.8 double-frees zero-length chunks on Linux (glibc aborts).
+
+    Freeing the Audio, quitting the mixer, and collecting garbage must not touch
+    the empty clip; before the fix this aborted the whole process on Linux CI.
+    """
+    import gc
+    write_wav(tmp_path / 'swap.wav', frames=0)
+    write_wav(tmp_path / 'match.wav')
+    audio = Audio(tmp_path)
+    assert set(audio.sounds) == {'match'}
+    del audio
+    pygame.mixer.quit()
+    gc.collect()
 
 
 def test_uppercase_extension_loads(tmp_path):
