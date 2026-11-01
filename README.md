@@ -51,7 +51,7 @@ high-score ranking.
 | Key | Mode | Symbols | Swaps | Matches run |
 | --- | --- | --- | --- | --- |
 | `classic-30` | Classic (default) | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
-| `adventure-first-v1` | Adventure | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
+| `adventure` | Adventure | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
 | `diagonal-30` | Diagonal | the four elements plus sun | any touching symbol, diagonals included | rows, columns, and both diagonals |
 
 **Classic** is the primary mode. Four elements for a match-four game keeps about 4.5 legal
@@ -67,7 +67,7 @@ a `Mode(...)` entry in that file's registry for another 30-move variant.
 
 ### Adventure: First Transmutation
 
-Start with `uv run alchemy --mode adventure-first-v1`, or press **C** twice from
+Start with `uv run alchemy --mode adventure`, or press **C** twice from
 Classic. Reach **3,500 points** using the initial 64 tiles and **20 replacement
 reactants of each element**. There is no move limit. Matching consumes tiles;
 replacement tiles are drawn from the remaining reserves, with no refunds.
@@ -94,8 +94,8 @@ efficiency rather than points: most material left, then fewest swaps, with point
 breaking any remaining tie. Earlier wins saved without these statistics rank after
 those with them. The improved stir uses experiment revision `adventure-first-v2`; **Tab**
 in Adventure scores shows the original revision separately, with unavailable
-efficiency statistics clearly labeled. The launch option remains
-`adventure-first-v1` for compatibility. The initial target is for playtesting;
+efficiency statistics clearly labeled. The earlier launch name
+`--mode adventure-first-v1` still works. The initial target is for playtesting;
 campaign progression and reactant recovery are future work.
 
 Earlier five-element, straight-lines-only play is retired. Scores set under those rules are

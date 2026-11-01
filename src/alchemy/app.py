@@ -11,7 +11,7 @@ from .adventure import AdventureGame
 from .resources import load_symbols
 from .audio import Audio
 from .scores import Scoreboard, score_categories
-from .modes import MODES, DEFAULT_KEY, ADVENTURE
+from .modes import MODES, MODE_ALIASES, DEFAULT_KEY, ADVENTURE
 from .motion import Motion
 from .render import (WIDTH, HEIGHT, LEFT, TOP, TILE, BG, PLAYER_BUTTON, HINT_BUTTON,
                      SCORES_BUTTON, RESTART_BUTTON, Canvas, draw)
@@ -31,6 +31,7 @@ def parse_args():
     parser.add_argument('--player', default=None, help='Set and remember your local player name (up to 16 characters)')
     parser.add_argument('--scores-dir', type=Path, help='Override local scoreboard directory')
     parser.add_argument('--mode', choices=sorted(MODES), default=DEFAULT_KEY,
+                        type=lambda key: MODE_ALIASES.get(key, key),
                         help='Rule variant (default: %(default)s)')
     args = parser.parse_args()
     if not 0 <= args.volume <= 1:

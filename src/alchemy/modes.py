@@ -4,6 +4,8 @@ A mode is pure data with no pygame or board dependency, so `board.py` stays a
 rules module and `app.py` reads its colours and copy from here instead of from
 module globals. Scoreboards are partitioned by `Mode.key` (the scoreboard's
 MODE column), while `scores.RULES` versions the scoring formula itself.
+Adventure is the exception: it records under its experiment's own key (see
+`adventure.Experiment`), so its mode key only names the mode on the command line.
 """
 from dataclasses import dataclass
 
@@ -30,7 +32,8 @@ DIAGONAL_PRACTICE = ('Swap any touching symbols, diagonals too.',
 
 @dataclass(frozen=True)
 class Mode:
-    """One playable variant. `key` is durable: it identifies saved scores."""
+    """One playable variant. `key` is durable: it is the --mode name and, except
+    for Adventure, identifies saved scores."""
     key: str
     label: str
     caption: str
@@ -75,7 +78,7 @@ DIAGONALS = Mode(
 )
 
 ADVENTURE = Mode(
-    key='adventure-first-v1',
+    key='adventure',
     label='Adventure',
     caption='Alchemy | First Transmutation',
     tagline='One experiment. A finite supply.',
@@ -90,6 +93,9 @@ ADVENTURE = Mode(
 )
 
 MODES = {mode.key: mode for mode in (CLASSIC, DIAGONALS, ADVENTURE)}
+# Earlier --mode names that still work. 0.1.5 and 0.1.6 named Adventure after its
+# first experiment revision; its scores keep that key either way.
+MODE_ALIASES = {'adventure-first-v1': 'adventure'}
 DEFAULT_KEY = CLASSIC.key
 DEFAULT_MODE = MODES[DEFAULT_KEY]
 

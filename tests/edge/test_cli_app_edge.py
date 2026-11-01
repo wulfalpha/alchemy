@@ -296,7 +296,7 @@ def test_mode_key_cycles_and_starts_a_new_game():
     keys = [g.mode.key for g in st['games']]
     assert len(keys) == 4                 # one game at startup, one per press
     assert keys[0] != keys[1]             # the press moved to the other mode
-    assert keys[2] == 'adventure-first-v1'
+    assert keys[2] == 'adventure'
     assert keys[3] == keys[0]             # and cycling wraps back around
 
 
@@ -447,3 +447,18 @@ def test_restart_and_mode_switch_never_ask_before_a_swap_or_after_game_over():
         return [pygame.event.Event(pygame.QUIT)]
     st = drive(script)
     assert len(st['games']) == 4
+
+
+@pytest.mark.parametrize('name', ['adventure', 'adventure-first-v1'])
+def test_adventure_mode_name_and_old_alias_both_start_adventure(name):
+    st = drive(lambda frame, st: [pygame.event.Event(pygame.QUIT)], argv=('--mode', name))
+    from alchemy.adventure import AdventureGame
+    assert isinstance(st['games'][0], AdventureGame) and st['games'][0].mode.key == 'adventure'
+
+
+def test_mode_help_lists_only_current_names():
+    r = run('--help')
+    assert '{adventure,classic-30,diagonal-30}' in r.stdout and 'first-v1' not in r.stdout
+    assert run('--smoke-test', '--mode', 'adventure-first-v1').returncode == 0
+    bad = run('--mode', 'adventure-first-v9')
+    assert bad.returncode == 2 and "invalid choice: 'adventure-first-v9'" in bad.stderr
