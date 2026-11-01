@@ -456,3 +456,15 @@ A definition regression test guards the released kit and objective.
 The 3,500 target, point ranking, free stirs, and no-refund policy remain unchanged.
 Efficiency grades, notebook/experiment selection, further objectives, and versioned
 run saving are deferred until this feedback and record collection is playtested.
+
+### Future option: stirs as a difficulty setting (noted 2026-11-01)
+
+Since 0.1.7, Adventure ranks scores by efficiency: material left (more is better),
+then fewer successful swaps, then points. Stirs are recorded but deliberately left
+out of the ranking, so an unlucky run that needs many stirs is not punished for it.
+
+A later difficulty setting could make stirs count. Possible forms, none chosen yet:
+rank stirs as a tie-breaker after swaps; cost a few points or a move per stir; or
+allow only a limited number of stirs per run. Any of these changes how runs compare,
+so it would need its own experiment key or revision (as adventure-first-v2 did) so
+existing records are not re-ranked under the new rules.
