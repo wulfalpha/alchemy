@@ -16,6 +16,16 @@ RULE_LABELS = {RULES: 'Local high scores',
                OLDEST_RULES: 'Legacy scores / per-line'}
 MODE = 'classic-30'
 
+# Adventure wins all clear the same target, so points barely separate them; rank by
+# efficiency instead. Rows saved before efficiency stats existed sort after the rest.
+POINTS_ORDER = 'score DESC, completed ASC, id ASC'
+EFFICIENCY_ORDER = ('material_left IS NULL, material_left DESC, swaps ASC, '
+                    'score DESC, completed ASC, id ASC')
+
+
+def ranking_order(mode):
+    return EFFICIENCY_ORDER if mode.startswith('adventure-') else POINTS_ORDER
+
 
 @dataclass(frozen=True)
 class ScoreCategory:
@@ -135,7 +145,7 @@ class Scoreboard:
         try:
             rows = self.connection.execute('''SELECT player, score, completed, id, material_left, swaps, stirs FROM scores
                 WHERE seed=? AND mode=? AND rules=?
-                ORDER BY score DESC, completed ASC, id ASC LIMIT 10''',
+                ORDER BY ''' + ranking_order(mode) + ' LIMIT 10',
                 ('' if seed is None else str(seed), mode, rules)).fetchall()
             return [dict(player=p, score=s, completed=d, id=i, material_left=m, swaps=w, stirs=t)
                     for p, s, d, i, m, w, t in rows]

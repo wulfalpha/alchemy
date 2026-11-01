@@ -70,6 +70,8 @@ class ClassicView:
 
     score_row_height = 33
     tab_hint = 'Tab: current and legacy scoring'
+    record_status = 'New local high score!'
+    ranking_note = ''
 
     def score_columns(self, canvas):
         canvas.text('DATE (UTC)', (440, 252), 14, MUTED)
@@ -119,14 +121,19 @@ class AdventureView:
 
     score_row_height = 34
     tab_hint = 'Tab: current and original experiment'
+    record_status = 'New local best: most material left!'
+    ranking_note = '  /  ranked by material left, then fewest swaps'
 
     def score_columns(self, canvas):
-        pass
+        canvas.text('MATERIAL LEFT', (440, 252), 14, MUTED)
 
     def score_detail(self, canvas, entry, y):
-        stats = ('Efficiency stats unavailable' if entry['material_left'] is None else
-                 f"Left: {entry['material_left']} / Swaps: {entry['swaps']} / Stirs: {entry['stirs']}")
-        canvas.text(stats, (108, y+19), 14, MUTED)
+        if entry['material_left'] is None:
+            canvas.text('-', (440, y), 16, MUTED)
+            canvas.text('Efficiency stats unavailable', (108, y+19), 14, MUTED)
+        else:
+            canvas.text(entry['material_left'], (440, y), 16, GOLD)
+            canvas.text(f"Swaps: {entry['swaps']} / Stirs: {entry['stirs']}", (108, y+19), 14, MUTED)
 
 
 VIEWS = {ADVENTURE.key: AdventureView()}
@@ -233,7 +240,7 @@ def draw_end_screen(canvas, session, view):
     canvas.text(f'{game.score:,} points', (150, 370), 38, GOLD)
     status = 'Score saved locally' if session.score_saved else 'Score could not be saved'
     if session.score_saved and session.results and session.results[0]['id'] == session.run_id:
-        status = 'New local high score!'
+        status = view.record_status
     canvas.text(view.end_status(game, status), (110, 425), 16, GOLD)
     view.end_details(canvas, game)
 
@@ -246,7 +253,7 @@ def draw_scoreboard(canvas, session, view):
     canvas.text(category.label, (80, 215), 16, MUTED)
     seed = session.score_seed()
     seed_label = 'Unseeded / 30 moves' if seed is None else f'Seed {seed}'
-    canvas.text(seed_label[:48], (80, 235), 14, MUTED)
+    canvas.text(canvas.fit(seed_label[:48] + view.ranking_note, 520, 14), (80, 235), 14, MUTED)
     canvas.text('PLAYER', (80, 252), 14, MUTED)
     canvas.text('POINTS', (340, 252), 14, MUTED)
     view.score_columns(canvas)

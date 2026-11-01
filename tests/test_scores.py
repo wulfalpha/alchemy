@@ -122,3 +122,32 @@ def test_adventure_categories_do_not_expose_classic_history():
     assert len(score_categories('adventure-first-v1', 'Adventure')) == 1
     assert len(score_categories('classic-30', 'Classic')) == 5
     assert len(score_categories('diagonal-30', 'Diagonal')) == 5
+
+
+def test_adventure_ranks_by_material_left_then_swaps_then_points(tmp_path):
+    scores = Scoreboard(tmp_path)
+    mode = 'adventure-first-v2'
+    for run_id, points, left, swaps in (('high-points', 6000, 10, 30), ('most-left', 3500, 60, 12),
+                                        ('fewer-swaps', 3500, 40, 9), ('more-swaps', 3600, 40, 14),
+                                        ('tie-on-points', 3700, 40, 9)):
+        assert scores.record(run_id, 'Ada', points, 42, mode=mode, material_left=left, swaps=swaps, stirs=0)
+    assert [r['id'] for r in scores.top(42, mode=mode)] == [
+        'most-left', 'tie-on-points', 'fewer-swaps', 'more-swaps', 'high-points']
+    scores.close()
+
+
+def test_adventure_rows_without_stats_rank_after_rows_with_stats(tmp_path):
+    scores = Scoreboard(tmp_path)
+    scores.record('legacy', 'Ada', 9000, 42, mode='adventure-first-v1')
+    scores.record('measured', 'Ada', 3500, 42, mode='adventure-first-v1', material_left=0, swaps=40, stirs=3)
+    scores.record('legacy-low', 'Ada', 3500, 42, mode='adventure-first-v1')
+    assert [r['id'] for r in scores.top(42, mode='adventure-first-v1')] == ['measured', 'legacy', 'legacy-low']
+    scores.close()
+
+
+def test_classic_still_ranks_by_points_even_with_stats(tmp_path):
+    scores = Scoreboard(tmp_path)
+    scores.record('low', 'Ada', 100, material_left=99, swaps=1, stirs=0)
+    scores.record('high', 'Ada', 900)
+    assert [r['id'] for r in scores.top()] == ['high', 'low']
+    scores.close()

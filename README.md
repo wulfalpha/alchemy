@@ -89,8 +89,10 @@ This first experiment defaults to seed **42** so retries repeat the same kit and
 random sequence. Use `--seed` for other starting conditions. Successful experiments
 save locally under their own experiment revision and seed; stalled and abandoned
 attempts do not enter the leaderboard. New results include material left, swaps,
-and stirs. Rankings still use points while we collect data for future efficiency
-grades. The improved stir uses experiment revision `adventure-first-v2`; **Tab**
+and stirs. Because every win clears the same target, Adventure ranks by
+efficiency rather than points: most material left, then fewest swaps, with points
+breaking any remaining tie. Earlier wins saved without these statistics rank after
+those with them. The improved stir uses experiment revision `adventure-first-v2`; **Tab**
 in Adventure scores shows the original revision separately, with unavailable
 efficiency statistics clearly labeled. The launch option remains
 `adventure-first-v1` for compatibility. The initial target is for playtesting;
