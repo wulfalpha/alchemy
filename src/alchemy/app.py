@@ -76,6 +76,7 @@ def main():
 
 ARROWS = {pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0), pygame.K_UP: (0, -1), pygame.K_DOWN: (0, 1)}
 ACTIVATE = (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE)
+KEYBOARD_TIP = 'Keyboard: arrows + Enter'
 
 
 class Session:
@@ -130,6 +131,7 @@ class Session:
     def start_new_game(self, animate=True):
         """Begin a fresh experiment in the current mode. Also used by the mode switch."""
         self.game = AdventureGame(self.args.seed) if self.adventure else Game(self.args.seed, self.mode)
+        self.game.message = f'{self.game.message}  /  {KEYBOARD_TIP}'  # until the first move replaces it
         self.run_id = str(uuid4())
         self.score_saved = self.show_scores = False
         self.category_index = 0
