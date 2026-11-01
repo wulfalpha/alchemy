@@ -119,7 +119,7 @@ This is an independent prototype. No affiliation with an earlier game is implied
 
 ## Development
 
-Rules live in `src/alchemy/board.py`; rendering and input live in `src/alchemy/app.py`.
+Rules live in `src/alchemy/board.py`; input and the frame loop live in `src/alchemy/app.py`, and drawing lives in `src/alchemy/render.py`.
 
 ```sh
 PYTHONPATH=src python -m unittest discover -s tests -v
