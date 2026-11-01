@@ -24,6 +24,8 @@ def parse_args():
     parser.add_argument('--screenshot', type=Path, help='Save a frame (.png, .jpg, .bmp; defaults to .png)')
     parser.add_argument('--sound-dir', type=Path, help='Directory of optional WAV/OGG effects')
     parser.add_argument('--mute', action='store_true', help='Start with sound muted')
+    parser.add_argument('--no-tones', action='store_true',
+                        help='Play only sound files; no built-in tones for the rest')
     parser.add_argument('--volume', type=float, default=0.6, help='Effect volume from 0 to 1')
     parser.add_argument('--assets-dir', type=Path, help='Custom symbol PNG directory')
     parser.add_argument('--player', default=None, help='Set and remember your local player name (up to 16 characters)')
@@ -302,7 +304,7 @@ class Session:
 
 def run(args, scores):
     pygame.init()
-    audio = Audio(args.sound_dir, args.volume, args.mute)
+    audio = Audio(args.sound_dir, args.volume, args.mute, tones=not args.no_tones)
     window = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
     canvas = Canvas()
     clock = pygame.time.Clock()

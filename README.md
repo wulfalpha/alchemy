@@ -107,7 +107,7 @@ Diagonal mode. Seeded and unseeded results remain separate. Nothing is rewritten
 
 ## Sounds
 
-Optional sound hooks are ready. Drop WAV or OGG effects into `sounds/` using the filenames in [sounds/README.md](https://github.com/wulfalpha/alchemy/blob/main/sounds/README.md), then restart. Press **M** to mute; use `--volume 0.4` to adjust volume. Missing audio files or devices do not prevent play.
+Every event has a built-in placeholder tone, synthesised at startup, so the game has sound straight after `pip install`. To replace any of them, drop WAV or OGG effects into `sounds/` (or a folder given with `--sound-dir`) using the filenames in [sounds/README.md](https://github.com/wulfalpha/alchemy/blob/main/sounds/README.md), then restart. A file always takes priority over its tone, so you can replace them one at a time. Press **M** to mute, use `--volume 0.4` to adjust volume, or `--no-tones` to hear only your own files. Missing audio files or devices do not prevent play.
 
 ## Artwork
 
@@ -134,7 +134,7 @@ The full suite, including the edge-case tests in `tests/edge/`, needs pytest:
 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run --with pytest pytest -q
 ```
 
-Use `alchemy --seed 42` for a reproducible game. This first version has session scoring; bundled sound clips and additional modes are not implemented yet.
+Use `alchemy --seed 42` for a reproducible game.
 
 ## License
 
@@ -212,4 +212,4 @@ settle; restart remains available. The name editor pauses the reaction sequence.
 Press **A** to toggle remembered reduced motion (no sweeps, fades, or falling
 animations). **Tab** inside the local scoreboard switches between new shape
 scoring and previous per-line scoring; historical scores are preserved separately.
-Sound clips remain optional; `l_shape` and `t_shape` hooks are ready.
+L and T reactions have their own `l_shape` and `t_shape` sounds.
