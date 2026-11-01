@@ -75,7 +75,7 @@ def test_same_seed_same_screenshot_across_hash_seeds(tmp_path):
         p = tmp_path / f's{hs}.png'
         r = run('--smoke-test', '--seed', '42', '--screenshot', str(p), env=dict(ENV, PYTHONHASHSEED=hs))
         assert r.returncode == 0
-        shots.append(pygame.image.tostring(pygame.image.load(str(p)), 'RGB'))
+        shots.append(pygame.image.tobytes(pygame.image.load(str(p)), 'RGB'))
     assert shots[0] == shots[1] == shots[2]
 
 

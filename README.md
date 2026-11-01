@@ -10,6 +10,8 @@ With Python 3.12+:
 pip install alchemy-game
 ```
 
+The game uses [pygame-ce](https://pyga.me/), the community edition of pygame, which publishes wheels for Python 3.12 through 3.15. Both packages provide `import pygame`, so install into an environment without the original `pygame` (or use pipx/uv as below).
+
 Or as a standalone tool (no project venv needed):
 
 ```sh
