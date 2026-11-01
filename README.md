@@ -119,6 +119,10 @@ The five transparent PNGs in `img/` are fresh geometric drawings of traditional 
 
 This is an independent prototype. No affiliation with an earlier game is implied; naming and distribution rights have not been legally reviewed.
 
+## Fonts
+
+The game bundles its typefaces so it looks the same on every platform. Headings use [Cormorant](https://github.com/CatharsisFonts/Cormorant) (Garamond, and Infant for its full-height numerals) by Christian Thalmann; interface text uses [Source Sans 3](https://github.com/adobe-fonts/source-sans) by Adobe. Both are under the SIL Open Font License 1.1; the license texts ship beside the fonts in `src/alchemy/assets/fonts/`.
+
 ## Development
 
 Rules live in `src/alchemy/board.py`; input and the frame loop live in `src/alchemy/app.py`, and drawing lives in `src/alchemy/render.py`.
@@ -138,7 +142,7 @@ Use `alchemy --seed 42` for a reproducible game.
 
 ## License
 
-Released under the [MIT License](https://github.com/wulfalpha/alchemy/blob/main/LICENSE). Copyright (c) 2026 Andrew Davidson.
+Released under the [MIT License](https://github.com/wulfalpha/alchemy/blob/main/LICENSE). Copyright (c) 2026 Andrew Davidson. The bundled fonts keep their own SIL Open Font License (see [Fonts](#fonts)).
 
 ## Reliability and reaction feedback
 

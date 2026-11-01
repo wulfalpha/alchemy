@@ -3,6 +3,10 @@
 Everything a mode draws differently lives in a view (`ClassicView`,
 `AdventureView`); `draw()` lays out the shared frame around it.
 """
+import io
+from importlib.resources import files
+import logging
+
 import pygame
 from .board import SIZE
 from .modes import ADVENTURE
@@ -23,7 +27,13 @@ PLAYER_BUTTON = pygame.Rect(662, 28, 320, 34)
 HINT_BUTTON = pygame.Rect(662, 590, 142, 46)
 SCORES_BUTTON = pygame.Rect(662, 550, 320, 32)
 RESTART_BUTTON = pygame.Rect(818, 590, 164, 46)
-FONT_SIZES = (14, 16, 19, 24, 38, 48)
+# Layout size -> (bundled font, pixel size). Small UI text is Source Sans 3;
+# headings are Cormorant Garamond. Cormorant's default digits are old-style
+# (a 0 reads as an o), so the large numeric sizes use Cormorant Infant, whose
+# default digits are lining; its distinct a and g never appear at those sizes.
+SANS, SERIF, NUMERALS = 'SourceSans3-Regular.ttf', 'CormorantGaramond-SemiBold.otf', 'CormorantInfant-SemiBold.otf'
+FONTS = {14: (SANS, 15), 16: (SANS, 17), 19: (SANS, 21),
+         24: (SERIF, 29), 38: (NUMERALS, 46), 48: (NUMERALS, 58)}
 CONFIRM_PROMPTS = {'restart': 'Abandon this experiment? Press R or New game again.',
                    'mode': 'Abandon this experiment and switch mode? Press C again.'}
 
@@ -33,7 +43,7 @@ class Canvas:
 
     def __init__(self):
         self.screen = pygame.Surface((WIDTH, HEIGHT))
-        self.fonts = {size: pygame.font.SysFont('dejavusans', size) for size in FONT_SIZES}
+        self.fonts = {size: load_font(name, pixels, size) for size, (name, pixels) in FONTS.items()}
 
     def text(self, value, pos, size=19, color=TEXT):
         self.screen.blit(self.fonts[size].render(str(value), True, color), pos)
@@ -48,6 +58,16 @@ class Canvas:
         overlay = pygame.Surface(rect.size, pygame.SRCALPHA)
         overlay.fill(color)
         self.screen.blit(overlay, rect)
+
+
+def load_font(name, pixels, fallback_size):
+    """A bundled font, or a system font with a warning if the file is unusable."""
+    try:
+        data = files('alchemy').joinpath('assets', 'fonts', name).read_bytes()
+        return pygame.font.Font(io.BytesIO(data), pixels)
+    except (pygame.error, OSError) as error:
+        logging.warning('Cannot load bundled font %s; using a system font: %s', name, error)
+        return pygame.font.SysFont('dejavusans', fallback_size)
 
 
 class ClassicView:
@@ -205,10 +225,10 @@ def draw_board(canvas, session):
 def draw_panel(canvas, session, view):
     screen, game = canvas.screen, session.game
     canvas.text('YOUR EXPERIMENT', (662, 158), 14, GOLD)
-    canvas.text(f'{game.score:,}', (658, 183), 48)
+    canvas.text(f'{game.score:,}', (658, 179), 48)
     canvas.text('POINTS', (664, 244), 14, MUTED)
     value, label, note = view.counter(game)
-    canvas.text(value, (855, 183), 48)
+    canvas.text(value, (855, 179), 48)
     canvas.text(label, (847, 244), 14, MUTED)
     if note:
         canvas.text(note, (817, 264), 14, MUTED)
