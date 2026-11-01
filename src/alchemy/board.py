@@ -8,7 +8,6 @@ from random import Random
 from .modes import DEFAULT_MODE
 
 SIZE = 8
-KINDS = DEFAULT_MODE.kinds  # primary mode's symbol count; per-mode use mode.kinds
 PLUS_BONUS = 200
 
 
@@ -40,13 +39,13 @@ def matches(grid, mode=None):
     return {cell for run in matched_runs(grid, mode) for cell in run}
 
 
-def shape_crossings(grid, mode=None):
+def shape_crossings(grid, mode=None, runs=None):
     """One exclusive L/T/plus classification per crossing of maximal 4+ runs.
 
     Only horizontal and vertical runs form shapes; a diagonal run earns its
-    length bonus but never an L, T, or plus.
+    length bonus but never an L, T, or plus. Pass `runs` to reuse matched_runs().
     """
-    runs = matched_runs(grid, mode)
+    runs = matched_runs(grid, mode) if runs is None else runs
     horizontal = [r for r in runs if r[0][1] == r[-1][1]]
     vertical = [r for r in runs if r[0][0] == r[-1][0]]
     shapes = {'l_shape': set(), 't_shape': set(), 'plus': set()}
@@ -56,28 +55,6 @@ def shape_crossings(grid, mode=None):
                 ends = int(cell in (h[0], h[-1])) + int(cell in (v[0], v[-1]))
                 shapes[('plus', 't_shape', 'l_shape')[ends]].add(cell)
     return shapes
-
-
-def plus_centers(grid):
-    """True pluses: both 4+ runs extend on both sides of their crossing."""
-    centers = set()
-    for y in range(1, SIZE - 1):
-        for x in range(1, SIZE - 1):
-            value = grid[y][x]
-            if value is None:
-                continue
-            lengths = []
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                length = 0
-                xx, yy = x + dx, y + dy
-                while 0 <= xx < SIZE and 0 <= yy < SIZE and grid[yy][xx] == value:
-                    length += 1
-                    xx, yy = xx + dx, yy + dy
-                lengths.append(length)
-            right, left, down, up = lengths
-            if min(lengths) > 0 and right + left + 1 >= 4 and down + up + 1 >= 4:
-                centers.add((x, y))
-    return centers
 
 
 def adjacent(a, b, mode=None):
@@ -185,12 +162,13 @@ class Game:
             return []
         self.chain += 1
         count = len(self.pending)
-        shapes = shape_crossings(self.grid, self.mode)
+        runs = matched_runs(self.grid, self.mode)
+        shapes = shape_crossings(self.grid, self.mode, runs)
         pluses = len(shapes['plus'])
         l_bonus = len(shapes['l_shape']) * 100
         t_bonus = len(shapes['t_shape']) * 150
         bonus = pluses * PLUS_BONUS
-        length_bonus = sum((len(run) - 4) * 25 for run in matched_runs(self.grid, self.mode))
+        length_bonus = sum((len(run) - 4) * 25 for run in runs)
         points = (count * 25 + length_bonus + bonus + l_bonus + t_bonus) * self.chain
         self.last_reaction = dict(base=count * 25, length=length_bonus, plus=bonus,
                                   multiplier=self.chain, total=points, l_shape=l_bonus, t_shape=t_bonus)

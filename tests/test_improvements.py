@@ -1,4 +1,3 @@
-import pygame
 import pytest
 from alchemy.board import Game, matched_runs, matches
 from alchemy.app import viewport, logical_position

@@ -1,6 +1,6 @@
 # Optional sound effects
 
-Drop short `.wav` or `.ogg` files here, then restart the game. No code changes required. WAV takes priority if both formats exist. Missing effects are silent; invalid files are logged and skipped. The game also runs without an audio device.
+Drop short `.wav` or `.ogg` files here, then restart the game. No code changes required. WAV takes priority if both formats exist. Events without a file play a built-in tone (or stay silent with `--no-tones`), so you can replace sounds one at a time. Invalid files are logged and skipped. The game also runs without an audio device.
 
 | Filename | Trigger |
 | --- | --- |

@@ -1,6 +1,6 @@
 """Edge-case tests for alchemy.board (the pure rules layer).
 
-Tests whose docstring says "Documents" pin current, debatable behaviour (see improvements.md);
+Tests whose docstring says "Documents" pin current, debatable behaviour (see docs/design_notes.md);
 update them if that behaviour is changed on purpose.
 """
 import random
@@ -10,8 +10,11 @@ from random import Random
 import pytest
 
 from alchemy import board
-from alchemy.board import (Game, SIZE, KINDS, PLUS_BONUS, legal_moves, matches,
-                           new_grid, plus_centers, refill, swap)
+from alchemy.board import (Game, SIZE, legal_moves, matches,
+                           new_grid, refill, shape_crossings, swap)
+from alchemy.modes import DEFAULT_MODE
+
+KINDS = DEFAULT_MODE.kinds
 
 
 def checker():
@@ -79,7 +82,7 @@ def test_short_or_ragged_grid_raises():
         matches([[0] * SIZE for _ in range(SIZE - 1)])
 
 
-# ---------- plus_centers() ----------
+# ---------- true pluses: shape_crossings()['plus'] ----------
 
 def test_plus_on_border_row_not_counted():
     g = checker()
@@ -87,7 +90,7 @@ def test_plus_on_border_row_not_counted():
         g[0][x] = 9
     for y in range(4):
         g[y][2] = 9
-    assert plus_centers(g) == set()  # it's a T: no 'up' arm
+    assert shape_crossings(g)['plus'] == set()  # it's a T: no 'up' arm
 
 
 def test_double_plus_on_one_long_row():
@@ -97,7 +100,7 @@ def test_double_plus_on_one_long_row():
     for y in range(1, 6):
         g[y][1] = 9
         g[y][5] = 9
-    assert plus_centers(g) == {(1, 3), (5, 3)}
+    assert shape_crossings(g)['plus'] == {(1, 3), (5, 3)}
 
 
 def test_solid_4x4_block_counts_as_four_pluses():
@@ -106,7 +109,7 @@ def test_solid_4x4_block_counts_as_four_pluses():
     for y in range(2, 6):
         for x in range(2, 6):
             g[y][x] = 9
-    assert plus_centers(g) == {(3, 3), (4, 3), (3, 4), (4, 4)}
+    assert shape_crossings(g)['plus'] == {(3, 3), (4, 3), (3, 4), (4, 4)}
 
 
 # ---------- swap / legal_moves ----------

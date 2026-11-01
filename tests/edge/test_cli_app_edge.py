@@ -75,7 +75,7 @@ def test_same_seed_same_screenshot_across_hash_seeds(tmp_path):
         p = tmp_path / f's{hs}.png'
         r = run('--smoke-test', '--seed', '42', '--screenshot', str(p), env=dict(ENV, PYTHONHASHSEED=hs))
         assert r.returncode == 0
-        shots.append(pygame.image.tostring(pygame.image.load(str(p)), 'RGB'))
+        shots.append(pygame.image.tobytes(pygame.image.load(str(p)), 'RGB'))
     assert shots[0] == shots[1] == shots[2]
 
 
@@ -106,7 +106,6 @@ def run_copy(repo, *args):
 
 
 def test_missing_custom_image_falls_back(repo_copy):
-    (repo_copy / 'img' / 'fire.png').unlink()
     assert run_copy(repo_copy, '--smoke-test').returncode == 0
 
 
@@ -129,7 +128,6 @@ def test_empty_custom_image_falls_back(repo_copy):
 
 
 def test_directory_named_like_image_falls_back(repo_copy):
-    (repo_copy / 'img' / 'air.png').unlink()
     (repo_copy / 'img' / 'air.png').mkdir()
     r = run_copy(repo_copy, '--smoke-test')
     assert r.returncode == 0, 'img/air.png being a directory crashes startup (exists() vs is_file())'
@@ -252,7 +250,10 @@ def test_restart_mid_cascade_and_with_seed_repeats_same_board():
             assert g.pending
             return [key(pygame.K_r)]
         if frame == 4:
-            return [click_px((818 + 10, 590 + 10))]  # New game button
+            assert len(st['games']) == 1  # first R only asks
+            return [key(pygame.K_r)]
+        if frame == 5:
+            return [click_px((818 + 10, 590 + 10))]  # New game button; fresh game, so no prompt
         return [pygame.event.Event(pygame.QUIT)]
 
     st = drive(script)
@@ -293,7 +294,7 @@ def test_mode_key_cycles_and_starts_a_new_game():
     keys = [g.mode.key for g in st['games']]
     assert len(keys) == 4                 # one game at startup, one per press
     assert keys[0] != keys[1]             # the press moved to the other mode
-    assert keys[2] == 'adventure-first-v1'
+    assert keys[2] == 'adventure'
     assert keys[3] == keys[0]             # and cycling wraps back around
 
 
@@ -388,3 +389,153 @@ def test_adventure_completion_records_only_success_with_effective_seed(tmp_path,
         assert rows[0]['swaps'] == rows[0]['stirs'] == 0
     assert scores.top(None, mode=FIRST_EXPERIMENT.key) == []
     scores.close()
+
+
+def _swap_then(steps):
+    """Make one legal swap on frame 2, then send steps[i] on frame 3+i; record the games."""
+    from alchemy.board import legal_moves
+
+    def script(frame, st):
+        g = st['games'][-1]
+        if frame == 2:
+            a, b = legal_moves(g.grid, g.mode)[0]
+            return [click(a), click(b)]
+        if 3 <= frame < 3 + len(steps):
+            st.setdefault('counts', []).append(len(st['games']))
+            return steps[frame - 3]
+        if frame < 3 + len(steps) + 5:
+            return []
+        return [pygame.event.Event(pygame.QUIT)]
+    return drive(script)
+
+
+def test_restart_in_progress_asks_and_other_input_cancels():
+    st = _swap_then([[key(pygame.K_r)], [key(pygame.K_m)], [key(pygame.K_r)],
+                     [click_px((818 + 10, 590 + 10))], []])
+    # R asks; M cancels; R asks again; the New game button confirms.
+    assert st['counts'] == [1, 1, 1, 1, 2]
+
+
+def test_mode_switch_in_progress_asks_once_then_switches():
+    st = _swap_then([[key(pygame.K_c)], [key(pygame.K_c)], [key(pygame.K_c)]])
+    keys = [g.mode.key for g in st['games']]
+    # C asks, C confirms, and the new, untouched game switches again without asking.
+    assert st['counts'] == [1, 1, 2] and len(keys) == 3 and len(set(keys)) == 3
+
+
+def test_restart_and_mode_switch_never_ask_before_a_swap_or_after_game_over():
+    from alchemy.board import legal_moves
+
+    def script(frame, st):
+        g = st['games'][-1]
+        if frame == 1:
+            return [key(pygame.K_r), key(pygame.K_c)]  # untouched games: both act at once
+        if frame == 2:
+            a, b = legal_moves(g.grid, g.mode)[0]
+            return [click(a), click(b)]
+        if g.pending:
+            return []
+        if not st.get('ended'):
+            st['ended'] = True
+            g.moves = 0  # the swapped game is now over
+            return []
+        if len(st['games']) == 3:
+            assert g.finished
+            return [key(pygame.K_r)]
+        return [pygame.event.Event(pygame.QUIT)]
+    st = drive(script)
+    assert len(st['games']) == 4
+
+
+@pytest.mark.parametrize('name', ['adventure', 'adventure-first-v1'])
+def test_adventure_mode_name_and_old_alias_both_start_adventure(name):
+    st = drive(lambda frame, st: [pygame.event.Event(pygame.QUIT)], argv=('--mode', name))
+    from alchemy.adventure import AdventureGame
+    assert isinstance(st['games'][0], AdventureGame) and st['games'][0].mode.key == 'adventure'
+
+
+def test_mode_help_lists_only_current_names():
+    r = run('--help')
+    assert '{adventure,classic-30,diagonal-30}' in r.stdout and 'first-v1' not in r.stdout
+    assert run('--smoke-test', '--mode', 'adventure-first-v1').returncode == 0
+    bad = run('--mode', 'adventure-first-v9')
+    assert bad.returncode == 2 and "invalid choice: 'adventure-first-v9'" in bad.stderr
+
+
+def test_keyboard_cursor_selects_and_swaps_like_clicks():
+    from alchemy.board import legal_moves
+    arrows = {(1, 0): pygame.K_RIGHT, (-1, 0): pygame.K_LEFT, (0, 1): pygame.K_DOWN, (0, -1): pygame.K_UP}
+
+    def walk(src, dst):
+        steps = []
+        for axis, (plus, minus) in ((0, ((1, 0), (-1, 0))), (1, ((0, 1), (0, -1)))):
+            delta = dst[axis] - src[axis]
+            steps += [key(arrows[plus if delta > 0 else minus])] * abs(delta)
+        return steps
+
+    def script(frame, st):
+        g = st['games'][-1]
+        if frame == 2:
+            (a, b) = st['move'] = legal_moves(g.grid)[0]
+            st['moves_before'] = g.moves
+            # First arrow only reveals the cursor at (3, 3); then walk to a, select, step to b, swap.
+            return ([key(pygame.K_UP)] + walk((3, 3), a) + [key(pygame.K_RETURN)]
+                    + walk(a, b) + [key(pygame.K_SPACE)])
+        if frame == 3:
+            st['moves_after'] = g.moves
+        return [pygame.event.Event(pygame.QUIT)] if frame > 3 else []
+
+    st = drive(script)
+    assert st['moves_after'] == st['moves_before'] - 1
+
+
+def _capture_session():
+    """Patch Session so a test can read the live UI state; returns (patcher, holder)."""
+    import alchemy.app as app
+    holder = {}
+    original = app.Session.__init__
+
+    def init(self, *a, **k):
+        original(self, *a, **k)
+        holder['session'] = self
+    return patch.object(app.Session, '__init__', init), holder
+
+
+def test_cursor_stays_on_board_and_enter_without_cursor_does_nothing():
+    patcher, holder = _capture_session()
+    seen = {}
+
+    def script(frame, st):
+        s = holder['session']
+        if frame == 2:
+            return [key(pygame.K_RETURN), key(pygame.K_SPACE)]  # no cursor yet
+        if frame == 3:
+            seen['before'] = (s.cursor, s.selected)
+            return [key(pygame.K_LEFT)] + [key(pygame.K_UP)] * 12 + [key(pygame.K_LEFT)] * 12 + [key(pygame.K_RETURN)]
+        if frame == 4:
+            seen['corner'] = (s.cursor, s.selected)
+            return [click((5, 5))]
+        if frame == 5:
+            seen['after_click'] = (s.cursor, s.selected)
+        return [pygame.event.Event(pygame.QUIT)] if frame > 5 else []
+    with patcher:
+        drive(script)
+    assert seen['before'] == (None, None)
+    assert seen['corner'] == ((0, 0), (0, 0))       # clamped at the corner, Enter selected it
+    assert seen['after_click'] == (None, (5, 5))    # a click hides the cursor
+
+
+def test_escape_deselects_before_quitting():
+    patcher, holder = _capture_session()
+    seen = {}
+
+    def script(frame, st):
+        if frame == 2:
+            return [click((0, 0)), key(pygame.K_ESCAPE)]
+        if frame == 3:
+            seen['selected'] = holder['session'].selected
+            return [key(pygame.K_ESCAPE)]
+        return []
+    with patcher:
+        st = drive(script)
+    assert seen['selected'] is None and st['frame'] == 3  # first Esc deselected; second quit

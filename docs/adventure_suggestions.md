@@ -14,7 +14,7 @@ I reviewed commit `bfd7cb5` ("Add finite-reactant Adventure mode for 0.1.5"), on
 - **Scores are saved only for successful runs**, under mode key `adventure-first-v1` and the seed (`app.py:258-262`).
 - **There is no saving or resuming of a run in progress.** R, C and Esc all discard it.
 
-**What's good:** the rules are clean, and they really do conserve material. Tests check that board tiles plus reserves plus tiles consumed always equals the starting total, and the existing suite passes: **227 passed**, with no Adventure failures. Gravity with empty cells, compacted columns and "never mint material" are all correct. Checking success only after the full cascade is fair. Adventure is a thin subclass of `Game` (`_refill` and `_settle` are its only rule overrides), so the shared engine stays simple. The design notes in `improvements.md` are careful and match the code. The sparse endgame, where you work with whatever material is left, is a genuinely new feel compared with Classic.
+**What's good:** the rules are clean, and they really do conserve material. Tests check that board tiles plus reserves plus tiles consumed always equals the starting total, and the existing suite passes: **227 passed**, with no Adventure failures. Gravity with empty cells, compacted columns and "never mint material" are all correct. Checking success only after the full cascade is fair. Adventure is a thin subclass of `Game` (`_refill` and `_settle` are its only rule overrides), so the shared engine stays simple. The design notes in `docs/design_notes.md` (formerly `improvements.md`) are careful and match the code. The sparse endgame, where you work with whatever material is left, is a genuinely new feel compared with Classic.
 
 ## What I measured
 
@@ -106,7 +106,7 @@ No real softlocks: every run ended with exactly one `game_over`, and input is co
 - **Ideas:**
   - A short **sequence of experiments** that unlock one after another. Store the furthest experiment reached and the best grade for each in the existing SQLite `settings`/`scores` tables (`scores.py:67-71`).
   - **Grades per experiment** (pass/silver/gold, or alchemical seals), based on points and material left. These are cheap to add, because `AdventureGame` already tracks `consumed`, `turns` and `material_left`.
-  - **Recovered material as a reward**, as already drafted in `improvements.md`:
+  - **Recovered material as a reward**, as already drafted in `docs/design_notes.md` (formerly `improvements.md`):
     - A 5+ line recovers 1 tile.
     - An L, T or plus recovers 2.
     - Recovery is always less than the tiles consumed.
@@ -156,7 +156,7 @@ Each idea below is marked with implementation effort. They all reuse `Experiment
 - **On the end screen:**
   - When the run stalls, show how far short the player fell and what material was stranded (B2).
   - When it succeeds, show the grade and material left. Today it says "New local high score!" even for a routine 3,500.
-- **Add an onboarding run.** The first time someone plays Adventure, run a short guided experiment with 4 tiles of each element in reserve. It would teach that refills come from the bottles and aren't charged twice, which `improvements.md` already flags as needing explanation.
+- **Add an onboarding run.** The first time someone plays Adventure, run a short guided experiment with 4 tiles of each element in reserve. It would teach that refills come from the bottles and aren't charged twice, which `docs/design_notes.md` (formerly `improvements.md`) already flags as needing explanation.
 - **Small polish:**
   - "MATERIAL LEFT" is zero-padded (`08`, `app.py:304`, `{remaining:02d}`). That suits a move counter but looks odd for material.
   - Colour-code each reserve count by how full it is.

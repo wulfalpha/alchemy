@@ -23,7 +23,8 @@ jobs:
       - uses: astral-sh/setup-uv@v10.2.0
         with:
           python-version: "3.12"
-      - run: uv run --locked --with pytest pytest -q
+      - run: uv run --locked ruff check
+      - run: uv run --locked pytest -q
 
   build:
     name: Build distributions

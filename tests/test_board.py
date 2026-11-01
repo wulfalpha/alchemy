@@ -1,6 +1,6 @@
 import unittest
 from random import Random
-from alchemy.board import Game, SIZE, legal_moves, matches, new_grid, refill, plus_centers
+from alchemy.board import Game, SIZE, legal_moves, matches, new_grid, refill, shape_crossings
 
 
 class BoardTests(unittest.TestCase):
@@ -30,7 +30,7 @@ class BoardTests(unittest.TestCase):
                 game.grid[y][1] = 0
             game.grid[1][4] = 2
             game.grid[4][1] = 2
-            self.assertEqual(plus_centers(game.grid), {(1, 1)})
+            self.assertEqual(shape_crossings(game.grid)['plus'], {(1, 1)})
             game.pending = matches(game.grid)
             self.assertEqual(len(game.pending), 7)
             game.chain = chain
@@ -44,13 +44,13 @@ class BoardTests(unittest.TestCase):
             grid[0][x] = 0
         for y in range(4):
             grid[y][1] = 0
-        self.assertFalse(plus_centers(grid))
+        self.assertFalse(shape_crossings(grid)['plus'])
         grid = self.baseline()
         for x in range(5):
             grid[2][x] = 0
         for y in range(1, 4):
             grid[y][2] = 0
-        self.assertFalse(plus_centers(grid))
+        self.assertFalse(shape_crossings(grid)['plus'])
 
     def test_invalid_swap_preserves_board_and_moves(self):
         game = Game(1)

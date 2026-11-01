@@ -10,6 +10,8 @@ With Python 3.12+:
 pip install alchemy-game
 ```
 
+The game uses [pygame-ce](https://pyga.me/), the community edition of pygame, which publishes wheels for Python 3.12 through 3.15. Both packages provide `import pygame` and share files. Upgrading from 0.1.6 or earlier with `pip install -U alchemy-game` works as is; if you then remove the old package with `pip uninstall pygame`, follow it with `pip install --force-reinstall pygame-ce`.
+
 Or as a standalone tool (no project venv needed):
 
 ```sh
@@ -33,13 +35,13 @@ uv run alchemy
 
 Or install into your Python environment with `python -m pip install -e .`, then run `alchemy`.
 
-- Click a symbol, then an adjacent symbol to swap them.
+- Click a symbol, then an adjacent symbol to swap them. To play from the keyboard, press an arrow key to show a cursor, move it with the arrows, and press **Enter** or **Space** where you would click. **Esc** clears a selection before it quits.
 - Match **four or more** identical symbols horizontally or vertically. Diagonals and groups without a four-symbol line do not clear.
 - Valid swaps use one of your 30 moves. Invalid swaps are reversed for free.
 - Cleared tiles refill from above; further matches produce cascades.
 - Each cleared symbol earns 25 points, with another 25 for each symbol beyond four **in each horizontal or vertical matched line**. A maximal line is scored only once. The total is multiplied by the cascade number. Intersections count each tile once. A true plus adds **200 points per crossing**, before the cascade multiplier: both horizontal and vertical runs must be 4+ symbols and extend on both sides of the crossing. T and L shapes earn their own bonuses, described below.
 - **H** or **Hint** highlights a valid swap, without a penalty.
-- **R** or **New game** restarts. **C** switches mode. **Esc** quits.
+- **R** or **New game** restarts. **C** switches mode. **Esc** quits. Once you have made a swap, R and C ask first: press the same key (or button) again to abandon the game, or anything else to keep playing.
 - Boards with no valid swaps are replaced automatically for free; the score and remaining moves carry over.
 
 ## Game modes
@@ -51,7 +53,7 @@ high-score ranking.
 | Key | Mode | Symbols | Swaps | Matches run |
 | --- | --- | --- | --- | --- |
 | `classic-30` | Classic (default) | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
-| `adventure-first-v1` | Adventure | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
+| `adventure` | Adventure | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
 | `diagonal-30` | Diagonal | the four elements plus sun | any touching symbol, diagonals included | rows, columns, and both diagonals |
 
 **Classic** is the primary mode. Four elements for a match-four game keeps about 4.5 legal
@@ -67,7 +69,7 @@ a `Mode(...)` entry in that file's registry for another 30-move variant.
 
 ### Adventure: First Transmutation
 
-Start with `uv run alchemy --mode adventure-first-v1`, or press **C** twice from
+Start with `uv run alchemy --mode adventure`, or press **C** twice from
 Classic. Reach **3,500 points** using the initial 64 tiles and **20 replacement
 reactants of each element**. There is no move limit. Matching consumes tiles;
 replacement tiles are drawn from the remaining reserves, with no refunds.
@@ -89,11 +91,13 @@ This first experiment defaults to seed **42** so retries repeat the same kit and
 random sequence. Use `--seed` for other starting conditions. Successful experiments
 save locally under their own experiment revision and seed; stalled and abandoned
 attempts do not enter the leaderboard. New results include material left, swaps,
-and stirs. Rankings still use points while we collect data for future efficiency
-grades. The improved stir uses experiment revision `adventure-first-v2`; **Tab**
+and stirs. Because every win clears the same target, Adventure ranks by
+efficiency rather than points: most material left, then fewest swaps, with points
+breaking any remaining tie. Earlier wins saved without these statistics rank after
+those with them. The improved stir uses experiment revision `adventure-first-v2`; **Tab**
 in Adventure scores shows the original revision separately, with unavailable
-efficiency statistics clearly labeled. The launch option remains
-`adventure-first-v1` for compatibility. The initial target is for playtesting;
+efficiency statistics clearly labeled. The earlier launch name
+`--mode adventure-first-v1` still works. The initial target is for playtesting;
 campaign progression and reactant recovery are future work.
 
 Earlier five-element, straight-lines-only play is retired. Scores set under those rules are
@@ -105,38 +109,43 @@ Diagonal mode. Seeded and unseeded results remain separate. Nothing is rewritten
 
 ## Sounds
 
-Optional sound hooks are ready. Drop WAV or OGG effects into `sounds/` using the filenames in [sounds/README.md](https://github.com/wulfalpha/alchemy/blob/main/sounds/README.md), then restart. Press **M** to mute; use `--volume 0.4` to adjust volume. Missing audio files or devices do not prevent play.
+Every event has a built-in metal or glass tone (bells, clanks, clinking vials), synthesised at startup, so the game has sound straight after `pip install`. To replace any of them, drop WAV or OGG effects into `sounds/` (or a folder given with `--sound-dir`) using the filenames in [sounds/README.md](https://github.com/wulfalpha/alchemy/blob/main/sounds/README.md), then restart. A file always takes priority over its tone, so you can replace them one at a time. Press **M** to mute, use `--volume 0.4` to adjust volume, or `--no-tones` to hear only your own files. Missing audio files or devices do not prevent play.
 
 ## Artwork
 
 The symbols were drawn with the Getty Research Institute's [Alchemical Symbols](https://www.getty.edu/research/exhibitions_events/exhibitions/alchemy/AoA_symbols.pdf) sheet as a visual reference. That sheet is Getty's and is not included in this repository.
 
-The five transparent PNGs in `img/` are fresh geometric drawings of traditional fire, water, air, earth, and sun symbols. Replace `fire.png`, `water.png`, `air.png`, `earth.png`, or `sun.png` to customize the game. Square transparent images work best; they display at 48 × 48 pixels.
+The built-in symbols in `src/alchemy/assets/` are fresh geometric drawings of traditional fire, water, air, earth, and sun symbols. To customize them in a source checkout, drop replacement `fire.png`, `water.png`, `air.png`, `earth.png`, or `sun.png` files into `img/` (see [img/README.md](https://github.com/wulfalpha/alchemy/blob/main/img/README.md)); installed copies can use `--assets-dir`. Square transparent images work best; they display at 48 × 48 pixels.
 
-`python tools/draw_symbols.py` regenerates the default images in both `img/` and `src/alchemy/assets/`. The latter provides packaged fallback assets for installed builds. Copy custom images there as well before building a distribution.
+`python tools/draw_symbols.py --force` regenerates the built-in images in `src/alchemy/assets/`. To ship custom artwork in a distribution, replace the files there before building.
 
 This is an independent prototype. No affiliation with an earlier game is implied; naming and distribution rights have not been legally reviewed.
 
+## Fonts
+
+The game bundles its typefaces so it looks the same on every platform. Headings use [Cormorant](https://github.com/CatharsisFonts/Cormorant) (Garamond, and Infant for its full-height numerals) by Christian Thalmann; interface text uses [Source Sans 3](https://github.com/adobe-fonts/source-sans) by Adobe. Both are under the SIL Open Font License 1.1; the license texts ship beside the fonts in `src/alchemy/assets/fonts/`.
+
 ## Development
 
-Rules live in `src/alchemy/board.py`; rendering and input live in `src/alchemy/app.py`.
+Rules live in `src/alchemy/board.py`; input and the frame loop live in `src/alchemy/app.py`, and drawing lives in `src/alchemy/render.py`.
 
 ```sh
 PYTHONPATH=src python -m unittest discover -s tests -v
 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy PYTHONPATH=src python -m alchemy --smoke-test --seed 42 --screenshot /tmp/alchemy.png
 ```
 
-The full suite, including the edge-case tests in `tests/edge/`, needs pytest:
+The full suite, including the edge-case tests in `tests/edge/`, needs pytest. `uv run` installs the pinned `dev` group (pytest and ruff) automatically:
 
 ```sh
-SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run --with pytest pytest -q
+SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run pytest -q
+uv run ruff check
 ```
 
-Use `alchemy --seed 42` for a reproducible game. This first version has session scoring; bundled sound clips and additional modes are not implemented yet.
+Use `alchemy --seed 42` for a reproducible game.
 
 ## License
 
-Released under the [MIT License](https://github.com/wulfalpha/alchemy/blob/main/LICENSE). Copyright (c) 2026 Andrew Davidson.
+Released under the [MIT License](https://github.com/wulfalpha/alchemy/blob/main/LICENSE). Copyright (c) 2026 Andrew Davidson. The bundled fonts keep their own SIL Open Font License (see [Fonts](#fonts)).
 
 ## Reliability and reaction feedback
 
@@ -148,9 +157,9 @@ Hints cycle through valid swaps without changing future tiles. With `--seed`, re
 
 Use `--assets-dir /path/to/images` for custom PNGs in installed copies. Invalid custom art falls back to packaged symbols with a warning. `--screenshot` supports PNG, JPG, and BMP; extensionless paths get `.png`. The output directory must already exist.
 
-Regenerating existing artwork requires `python tools/draw_symbols.py --force`. This overwrites both custom and packaged defaults.
+Regenerating existing artwork requires `python tools/draw_symbols.py --force`. This overwrites the packaged defaults in `src/alchemy/assets/`.
 
-Run the full regression suite with `uv run --with pytest pytest -q`.
+Run the full regression suite with `uv run pytest -q`.
 
 ## Offline high scores
 
@@ -210,4 +219,4 @@ settle; restart remains available. The name editor pauses the reaction sequence.
 Press **A** to toggle remembered reduced motion (no sweeps, fades, or falling
 animations). **Tab** inside the local scoreboard switches between new shape
 scoring and previous per-line scoring; historical scores are preserved separately.
-Sound clips remain optional; `l_shape` and `t_shape` hooks are ready.
+L and T reactions have their own `l_shape` and `t_shape` sounds.
