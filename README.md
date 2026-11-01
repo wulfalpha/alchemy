@@ -10,7 +10,7 @@ With Python 3.12+:
 pip install alchemy-game
 ```
 
-The game uses [pygame-ce](https://pyga.me/), the community edition of pygame, which publishes wheels for Python 3.12 through 3.15. Both packages provide `import pygame`, so install into an environment without the original `pygame` (or use pipx/uv as below).
+The game uses [pygame-ce](https://pyga.me/), the community edition of pygame, which publishes wheels for Python 3.12 through 3.15. Both packages provide `import pygame` and share files. Upgrading from 0.1.6 or earlier with `pip install -U alchemy-game` works as is; if you then remove the old package with `pip uninstall pygame`, follow it with `pip install --force-reinstall pygame-ce`.
 
 Or as a standalone tool (no project venv needed):
 

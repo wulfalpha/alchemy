@@ -3,7 +3,7 @@
 ## 0.1.7
 
 ### Install
-- **The game now depends on [pygame-ce](https://pyga.me/)** (2.5.8+) instead of pygame. pygame-ce publishes wheels for Python 3.12 through 3.15, so `pip install alchemy-game` now works on Python 3.14 and 3.15. Both packages provide `import pygame` and cannot share an environment: if you installed alchemy-game next to the original `pygame`, run `pip uninstall pygame` first, or install with `pipx install alchemy-game` / `uv tool install alchemy-game`.
+- **The game now depends on [pygame-ce](https://pyga.me/)** (2.5.8+) instead of pygame. pygame-ce publishes wheels for Python 3.12 through 3.15, so `pip install alchemy-game` now works on Python 3.14 and 3.15. **Upgrading with `pip install -U alchemy-game` just works:** pygame-ce is installed and takes over `import pygame`, while the old pygame stays listed beside it. To tidy up, run `pip uninstall pygame` **and then** `pip install --force-reinstall pygame-ce`. The two packages share files, so uninstalling pygame alone leaves pygame-ce broken (`module 'pygame' has no attribute 'Rect'`) until it is reinstalled.
 
 ### Sound
 - **Every event now has a sound out of the box.** Built-in metal and glass tones (bells, clanks, clinking vials, a stirred vessel) are synthesised at startup. Drop-in WAV/OGG files still take priority, one event at a time; `--no-tones` plays only your files.
