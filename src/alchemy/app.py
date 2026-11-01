@@ -100,6 +100,7 @@ class Session:
         self.score_saved = self.show_scores = False
         self.results = []
         self.selected = self.hint = None
+        self.confirming = None   # 'restart' or 'mode' while asking to abandon a game
         self.running = True
         self.start_new_game(animate=not args.smoke_test)
 
@@ -126,7 +127,8 @@ class Session:
         self.run_id = str(uuid4())
         self.score_saved = self.show_scores = False
         self.category_index = 0
-        self.selected = self.hint = None
+        self.selected = self.hint = self.confirming = None
+        self.swapped = False
         self.next_resolve = self.clear_started = 0
         self.reload_scores()
         self.motion.finish()
@@ -147,6 +149,20 @@ class Session:
         keys = list(MODES)
         self.switch_mode(keys[(keys.index(self.mode.key) + 1) % len(keys)])
         self.audio.play('restart')
+
+    def in_progress(self):
+        """Whether starting over would throw away a game the player has begun."""
+        return self.swapped and not self.game.finished
+
+    def confirm(self, action, confirming, perform):
+        """Run `perform` now, or ask first if it would abandon a game in progress.
+
+        The second request for the same action confirms; any other input cancels.
+        """
+        if confirming == action or not self.in_progress():
+            perform()
+        else:
+            self.confirming = action
 
     def can_act(self):
         """Whether board and hint input should be accepted right now."""
@@ -206,6 +222,7 @@ class Session:
                 self.replace_name = True
 
     def handle_key(self, event):
+        confirming, self.confirming = self.confirming, None
         if event.key == pygame.K_ESCAPE:
             if self.show_scores:
                 self.show_scores = False
@@ -223,21 +240,22 @@ class Session:
         elif event.key == pygame.K_l:
             self.toggle_scores()
         elif event.key == pygame.K_c:
-            self.cycle_mode()
+            self.confirm('mode', confirming, self.cycle_mode)
         elif event.key == pygame.K_m:
             self.audio.toggle()
         elif event.key == pygame.K_r:
-            self.restart()
+            self.confirm('restart', confirming, self.restart)
         elif event.key == pygame.K_h and self.can_act():
             self.show_hint()
 
     def handle_click(self, pos):
+        confirming, self.confirming = self.confirming, None
         if PLAYER_BUTTON.collidepoint(pos):
             self.open_name_editor()
         elif SCORES_BUTTON.collidepoint(pos):
             self.toggle_scores()
         elif RESTART_BUTTON.collidepoint(pos):
-            self.restart()
+            self.confirm('restart', confirming, self.restart)
         elif HINT_BUTTON.collidepoint(pos) and self.can_act():
             self.show_hint()
         elif self.can_act():
@@ -254,6 +272,7 @@ class Session:
         elif self.selected is not None and adjacent(self.selected, cell, self.mode):
             if self.game.attempt(self.selected, cell):
                 self.audio.play('swap')
+                self.swapped = True
                 self.clear_started = self.motion_time
                 self.next_resolve = self.motion_time + 350
             else:

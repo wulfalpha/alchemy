@@ -24,6 +24,8 @@ HINT_BUTTON = pygame.Rect(662, 590, 142, 46)
 SCORES_BUTTON = pygame.Rect(662, 550, 320, 32)
 RESTART_BUTTON = pygame.Rect(818, 590, 164, 46)
 FONT_SIZES = (14, 16, 19, 24, 38, 48)
+CONFIRM_PROMPTS = {'restart': 'Abandon this experiment? Press R or New game again.',
+                   'mode': 'Abandon this experiment and switch mode? Press C again.'}
 
 
 class Canvas:
@@ -153,7 +155,7 @@ def draw(canvas, session):
         draw_end_screen(canvas, session, view)
     if session.show_scores:
         draw_scoreboard(canvas, session, view)
-    if session.scores.error:
+    if session.scores.error and not session.confirming:
         canvas.text('Local scores unavailable; your game can continue.', (48, 735), 16, GOLD)
     if session.editing_name:
         draw_name_dialog(canvas, session)
@@ -218,7 +220,8 @@ def draw_panel(canvas, session, view):
     for button, label in ((SCORES_BUTTON, 'Local scores  [L]'), (HINT_BUTTON, 'Hint  [H]'),
                           (RESTART_BUTTON, 'New game  [R]')):
         pygame.draw.rect(screen, SURFACE, button, border_radius=8)
-        pygame.draw.rect(screen, (92, 105, 103), button, 1, border_radius=8)
+        asking = button is RESTART_BUTTON and session.confirming == 'restart'
+        pygame.draw.rect(screen, GOLD if asking else (92, 105, 103), button, 1, border_radius=8)
         rendered = canvas.fonts[16].render(label, True, TEXT)
         screen.blit(rendered, rendered.get_rect(center=button.center))
     if game.last_reaction:
@@ -229,7 +232,9 @@ def draw_panel(canvas, session, view):
                     (662, 692), 14, GOLD)
     canvas.text(f'Sound: {"off" if session.audio.muted else "on"}  [M]   /   ESC to quit', (662, 739), 14, MUTED)
     canvas.text(f'Motion: {"reduced" if session.reduced_motion else "animated"}  [A]', (662, 716), 14, MUTED)
-    if not session.scores.error:
+    if session.confirming:
+        canvas.text(CONFIRM_PROMPTS[session.confirming], (48, 735), 16, GOLD)
+    elif not session.scores.error:
         canvas.text(canvas.fit(game.message, 560), (48, 735), 16, GOLD)
 
 

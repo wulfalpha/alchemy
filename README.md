@@ -39,7 +39,7 @@ Or install into your Python environment with `python -m pip install -e .`, then 
 - Cleared tiles refill from above; further matches produce cascades.
 - Each cleared symbol earns 25 points, with another 25 for each symbol beyond four **in each horizontal or vertical matched line**. A maximal line is scored only once. The total is multiplied by the cascade number. Intersections count each tile once. A true plus adds **200 points per crossing**, before the cascade multiplier: both horizontal and vertical runs must be 4+ symbols and extend on both sides of the crossing. T and L shapes earn their own bonuses, described below.
 - **H** or **Hint** highlights a valid swap, without a penalty.
-- **R** or **New game** restarts. **C** switches mode. **Esc** quits.
+- **R** or **New game** restarts. **C** switches mode. **Esc** quits. Once you have made a swap, R and C ask first: press the same key (or button) again to abandon the game, or anything else to keep playing.
 - Boards with no valid swaps are replaced automatically for free; the score and remaining moves carry over.
 
 ## Game modes

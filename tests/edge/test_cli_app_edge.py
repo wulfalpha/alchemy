@@ -252,7 +252,10 @@ def test_restart_mid_cascade_and_with_seed_repeats_same_board():
             assert g.pending
             return [key(pygame.K_r)]
         if frame == 4:
-            return [click_px((818 + 10, 590 + 10))]  # New game button
+            assert len(st['games']) == 1  # first R only asks
+            return [key(pygame.K_r)]
+        if frame == 5:
+            return [click_px((818 + 10, 590 + 10))]  # New game button; fresh game, so no prompt
         return [pygame.event.Event(pygame.QUIT)]
 
     st = drive(script)
@@ -388,3 +391,59 @@ def test_adventure_completion_records_only_success_with_effective_seed(tmp_path,
         assert rows[0]['swaps'] == rows[0]['stirs'] == 0
     assert scores.top(None, mode=FIRST_EXPERIMENT.key) == []
     scores.close()
+
+
+def _swap_then(steps):
+    """Make one legal swap on frame 2, then send steps[i] on frame 3+i; record the games."""
+    from alchemy.board import legal_moves
+
+    def script(frame, st):
+        g = st['games'][-1]
+        if frame == 2:
+            a, b = legal_moves(g.grid, g.mode)[0]
+            return [click(a), click(b)]
+        if 3 <= frame < 3 + len(steps):
+            st.setdefault('counts', []).append(len(st['games']))
+            return steps[frame - 3]
+        if frame < 3 + len(steps) + 5:
+            return []
+        return [pygame.event.Event(pygame.QUIT)]
+    return drive(script)
+
+
+def test_restart_in_progress_asks_and_other_input_cancels():
+    st = _swap_then([[key(pygame.K_r)], [key(pygame.K_m)], [key(pygame.K_r)],
+                     [click_px((818 + 10, 590 + 10))], []])
+    # R asks; M cancels; R asks again; the New game button confirms.
+    assert st['counts'] == [1, 1, 1, 1, 2]
+
+
+def test_mode_switch_in_progress_asks_once_then_switches():
+    st = _swap_then([[key(pygame.K_c)], [key(pygame.K_c)], [key(pygame.K_c)]])
+    keys = [g.mode.key for g in st['games']]
+    # C asks, C confirms, and the new, untouched game switches again without asking.
+    assert st['counts'] == [1, 1, 2] and len(keys) == 3 and len(set(keys)) == 3
+
+
+def test_restart_and_mode_switch_never_ask_before_a_swap_or_after_game_over():
+    from alchemy.board import legal_moves
+
+    def script(frame, st):
+        g = st['games'][-1]
+        if frame == 1:
+            return [key(pygame.K_r), key(pygame.K_c)]  # untouched games: both act at once
+        if frame == 2:
+            a, b = legal_moves(g.grid, g.mode)[0]
+            return [click(a), click(b)]
+        if g.pending:
+            return []
+        if not st.get('ended'):
+            st['ended'] = True
+            g.moves = 0  # the swapped game is now over
+            return []
+        if len(st['games']) == 3:
+            assert g.finished
+            return [key(pygame.K_r)]
+        return [pygame.event.Event(pygame.QUIT)]
+    st = drive(script)
+    assert len(st['games']) == 4
