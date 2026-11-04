@@ -9,7 +9,8 @@ import logging
 
 import pygame
 from .board import SIZE
-from .modes import ADVENTURE
+from .modes import ADVENTURE_MODES
+from .medals import efficiency_medal, SILVER_MATERIAL, GOLD_MATERIAL
 
 WIDTH, HEIGHT = 1040, 780
 LEFT, TOP, TILE = 48, 154, 70
@@ -19,6 +20,7 @@ BG = (15, 24, 30)
 TEXT = (241, 229, 203)
 MUTED = (156, 173, 174)
 GOLD = (223, 181, 103)
+MEDAL_COLORS = {'Bronze': (205, 154, 111), 'Silver': (195, 209, 220), 'Gold': GOLD}
 SURFACE = (35, 49, 55)
 RULE = (57, 68, 68)
 
@@ -106,7 +108,8 @@ class AdventureView:
     """Adventure: finite material, a points target, and efficiency stats."""
 
     def counter(self, game):
-        return str(game.material_left), 'MATERIAL LEFT', 'Board tiles + reserves'
+        return (str(game.material_left), 'MATERIAL LEFT',
+                f'Silver {SILVER_MATERIAL}+ / Gold {GOLD_MATERIAL}+')
 
     def panel(self, canvas, session):
         game = session.game
@@ -122,7 +125,9 @@ class AdventureView:
         for i, name in enumerate(session.mode.names):
             canvas.text(f'{name.title()}: {game.reserves[i]}',
                         (PANEL + (i % 2)*160, 429+(i//2)*25), 16)
-        canvas.text(f'Used: {game.consumed}   Swaps: {game.turns}   Stirs: {game.stirs}',
+        stir_text = (f'Stirs: {game.stirs}' if game.stirs_remaining is None
+                     else f'Stirs left: {game.stirs_remaining}/{game.experiment.stir_limit}')
+        canvas.text(f'Used: {game.consumed}   Swaps: {game.turns}   {stir_text}',
                     (PANEL, 478), 14, MUTED)
 
     def end_title(self, game):
@@ -136,7 +141,8 @@ class AdventureView:
             canvas.text(f'{game.points_remaining:,} points short / {game.material_left} material left',
                         (122, 452), 16, GOLD)
         else:
-            canvas.text(f'Material left: {game.material_left}', (122, 452), 16, GOLD)
+            canvas.text(f'{game.medal} medal / Material left: {game.material_left}',
+                        (122, 452), 16, MEDAL_COLORS[game.medal])
         canvas.text(f'Reactants consumed: {game.consumed}', (122, 478), 16)
         canvas.text(f'Successful swaps: {game.turns} / Stirs: {game.stirs}', (122, 504), 16)
         canvas.text('L: view scores    R: retry experiment', (122, 548), 16)
@@ -154,11 +160,12 @@ class AdventureView:
             canvas.text('-', (440, y), 16, MUTED)
             canvas.text('Efficiency stats unavailable', (108, y+19), 14, MUTED)
         else:
-            canvas.text(entry['material_left'], (440, y), 16, GOLD)
+            medal = efficiency_medal(entry['material_left'])
+            canvas.text(f"{entry['material_left']} / {medal}", (440, y), 16, MEDAL_COLORS[medal])
             canvas.text(f"Swaps: {entry['swaps']} / Stirs: {entry['stirs']}", (108, y+19), 14, MUTED)
 
 
-VIEWS = {ADVENTURE.key: AdventureView()}
+VIEWS = {mode.key: AdventureView() for mode in ADVENTURE_MODES}
 DEFAULT_VIEW = ClassicView()
 
 
@@ -294,7 +301,8 @@ def draw_scoreboard(canvas, session, view):
         view.score_detail(canvas, entry, y)
     if not session.results:
         canvas.text('Complete an experiment to set a score.', (80, 300), 19)
-    canvas.text(view.tab_hint, (80, 630), 16, GOLD)
+    if len(session.categories()) > 1:
+        canvas.text(view.tab_hint, (80, 630), 16, GOLD)
     canvas.text('L or Esc to return to your experiment', (80, 658), 16, MUTED)
 
 

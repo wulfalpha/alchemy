@@ -168,4 +168,69 @@ def test_released_experiment_definition_requires_a_new_revision_for_changes():
     from dataclasses import asdict
     assert asdict(FIRST_EXPERIMENT) == dict(
         key='adventure-first-v2', title='First Transmutation', target=3500,
-        reserves=(20, 20, 20, 20), seed=42, stir_attempts=200)
+        reserves=(20, 20, 20, 20), seed=42, stir_attempts=200, stir_limit=None)
+
+
+@pytest.mark.parametrize('limit', [3, 5, 8])
+def test_last_stir_allows_play_but_next_blocked_board_stalls(limit):
+    from alchemy.adventure import EXPERIMENTS
+    game = AdventureGame(experiment=EXPERIMENTS[f'adventure-{limit}'])
+    blocked = [[(x+2*y) % 4 for x in range(8)] for y in range(8)]
+    game.grid = [row[:] for row in blocked]
+    game.stirs = limit-1
+    before = inventory(game.grid)
+    events = []
+    game._settle(events)
+    assert events == ['shuffle'] and not game.finished
+    assert game.stirs == limit and game.stirs_remaining == 0
+    assert inventory(game.grid) == before and legal_moves(game.grid)
+    game._settle([])
+    assert not game.finished  # Zero remaining does not end a playable board.
+    game.grid = [row[:] for row in blocked]
+    rng_state = game.rng.getstate()
+    events = []
+    game._settle(events)
+    assert events == ['game_over'] and game.failure_reason == 'stirs_exhausted'
+    assert game.grid == blocked and game.rng.getstate() == rng_state
+    assert game.stirs == limit and 'No stirs left' in game.message
+    assert game.resolve() == [] and game.hint() is None
+
+
+@pytest.mark.parametrize('limit', [3, 5, 8])
+def test_success_and_material_exhaustion_take_priority_over_stir_limit(limit):
+    from alchemy.adventure import EXPERIMENTS
+    config = EXPERIMENTS[f'adventure-{limit}']
+    for success in (False, True):
+        game = AdventureGame(experiment=config)
+        game.stirs = limit
+        game.grid = [[None]*8 for _ in range(8)]
+        game.reserves = [0]*4
+        game.score = config.target if success else 0
+        events = []
+        game._settle(events)
+        assert events == ['game_over']
+        assert game.outcome == ('success' if success else 'stalled')
+        assert game.failure_reason == (None if success else 'insufficient_material')
+
+
+@pytest.mark.parametrize('limit', [3, 5, 8])
+def test_limited_experiment_matches_unlimited_until_limit(limit):
+    from alchemy.adventure import EXPERIMENTS
+    config = EXPERIMENTS[f'adventure-{limit}']
+    assert config == replace(FIRST_EXPERIMENT, key=f'adventure-{limit}-v1', stir_limit=limit)
+    base, limited = AdventureGame(), AdventureGame(experiment=config)
+    policy = Random(32)
+    finishes = 0
+    while not limited.finished:
+        assert base.grid == limited.grid
+        move = policy.choice(legal_moves(base.grid))
+        assert base.attempt(*move) and limited.attempt(*move)
+        while limited.pending:
+            base.resolve()
+            finishes += limited.resolve().count('game_over')
+            assert limited.material_left + limited.consumed == limited.initial_material
+            assert limited.stirs <= limit
+            if not limited.finished:
+                assert limited.grid == base.grid and limited.reserves == base.reserves
+    assert finishes == 1
+    assert limited.score == base.score

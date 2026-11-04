@@ -7,11 +7,11 @@ from pathlib import Path
 os.environ.setdefault('PYGAME_HIDE_SUPPORT_PROMPT', '1')
 import pygame
 from .board import Game, SIZE, adjacent
-from .adventure import AdventureGame
+from .adventure import AdventureGame, EXPERIMENTS
 from .resources import load_symbols
 from .audio import Audio
 from .scores import Scoreboard, score_categories
-from .modes import MODES, MODE_ALIASES, DEFAULT_KEY, ADVENTURE
+from .modes import MODES, MODE_ALIASES, DEFAULT_KEY
 from .motion import Motion
 from .render import (WIDTH, HEIGHT, LEFT, TOP, TILE, BG, PLAYER_BUTTON, HINT_BUTTON,
                      SCORES_BUTTON, RESTART_BUTTON, Canvas, draw)
@@ -113,7 +113,7 @@ class Session:
 
     @property
     def adventure(self):
-        return self.mode == ADVENTURE
+        return self.mode.key in EXPERIMENTS
 
     def score_seed(self):
         return self.game.seed if isinstance(self.game, AdventureGame) else self.args.seed
@@ -130,7 +130,8 @@ class Session:
 
     def start_new_game(self, animate=True):
         """Begin a fresh experiment in the current mode. Also used by the mode switch."""
-        self.game = AdventureGame(self.args.seed) if self.adventure else Game(self.args.seed, self.mode)
+        self.game = (AdventureGame(self.args.seed, experiment=EXPERIMENTS[self.mode.key])
+                     if self.adventure else Game(self.args.seed, self.mode))
         self.game.message = f'{self.game.message}  /  {KEYBOARD_TIP}'  # until the first move replaces it
         self.run_id = str(uuid4())
         self.score_saved = self.show_scores = False

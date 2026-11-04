@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.8
+
+### Adventure
+- Add Easy (8 stirs), Medium (5), and Hard (3) difficulties, available through
+  the C mode cycle or `--mode adventure-8`, `adventure-5`, and `adventure-3`.
+  Each has a remaining-stirs counter and its own efficiency scoreboard.
+- Using the final stir permits continued play. A later blocked board ends the
+  run if no stirs remain; reaching the target after the full cascade takes priority.
+  Unlimited Adventure retains its existing rules and records.
+- Award Bronze for winning, Silver with at least 30 material left, and Gold with
+  at least 45. Medal goals appear by the material counter; awards appear on
+  completion and saved wins with known material statistics. Rankings are unchanged.
+
+### Development
+- Add a reproducible Adventure calibration tool and results from 960 simulated
+  runs to document the initial medal thresholds.
+- Reconcile historical design reviews with implemented features and remaining work.
+
 ## 0.1.7
 
 ### Install

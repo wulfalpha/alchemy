@@ -2,7 +2,98 @@
 
 I reviewed commit `bfd7cb5` ("Add finite-reactant Adventure mode for 0.1.5"), on 2026-10-12, without changing the repo. All numbers come from headless playouts of the real game rules (`src/alchemy/adventure.py`) plus a few runs of the real app loop with scripted clicks. The simulation scripts (`sim/`) and screenshots referenced below are not committed to the repo; they can be added on request.
 
-## How Adventure works today
+## Efficiency medals implemented — 2026-11-03
+
+Successful Adventure runs now earn Bronze (0–29 material left), Silver (30–44),
+or Gold (45+), using material remaining after the full winning cascade. All four
+Adventure variants share thresholds; stirs and swaps do not affect the medal.
+Saved wins with material statistics display the same awards without changing
+ranking or stored data. Missing statistics remain ungraded. See the
+[calibration report](medal_calibration.md) for measurements and limitations.
+This completes the efficiency-medal portion of the historical grades proposals;
+higher score targets, additional objectives, and continuing after success remain
+open. The historical backlog below predates this implementation.
+
+## Current difficulty decision — 2026-11-03
+
+After initial human playtesting, the selected difficulties are **Easy: 8 stirs**,
+**Medium: 5 stirs**, and **Hard: 3 stirs**. Launch names remain `adventure-8`,
+`adventure-5`, and `adventure-3`; their versioned score partitions are unchanged.
+Unlimited `adventure` remains available. All variants retain the same kit,
+target, default seed, and final-stir behavior. This decision supersedes the
+comparison-only status of eight stirs and the tentative tier status below.
+
+## Stir-limit playtests added — 2026-11-03
+
+`adventure-3` and `adventure-5` now offer three and five successful automatic
+stirs, respectively, alongside unlimited `adventure`. All share the original kit,
+target, and default seed. Each limited variant saves under its own versioned key.
+The final allowed stir keeps play going; a subsequent blocked board with matching
+material ends with a no-stirs-left message. Target success takes priority.
+These are playtest candidates, not measured easy/medium/hard tiers. Grades,
+recovery, authored kits, and campaign progression remain open. This update
+supersedes the stir-selection status in the 0.1.7 snapshot below.
+
+## Current status — reconciled 2026-11-03
+
+Checked against local `main` at `68cfdd6` (version 0.1.7), including the rule,
+session, rendering, score-storage code, and existing regression tests. This is a
+source review, not a new balance study or a claim that the full suite was rerun.
+The original measurements and findings below describe 0.1.5; their line numbers,
+test counts, and simulation results are historical.
+
+| Review item | Status in 0.1.7 | Evidence / remaining scope |
+| --- | --- | --- |
+| B1: sparse-board false stalls | Known case fixed; search remains bounded | `adventure.py`: `stir` tries 200 random layouts, then `sparse_layout` for 5–16 tiles. `test_sparse_fallback_recovers_known_false_stall_without_spending_material` covers the reported case. Failure still does not prove impossibility. |
+| B2: misleading stall reason | Done | `AdventureGame.failure_summary` and `_settle` distinguish insufficient material from exhausted search. `AdventureView.end_details` shows shortfall and material left. |
+| B3: Classic categories in Adventure scores | Done | `scores.score_categories` returns only current/original Adventure categories; covered by `test_adventure_categories_do_not_expose_classic_history`. |
+| B4: experiment revision protection | Guarded by explicit key and regression test | Saving uses `Experiment.key`, currently `adventure-first-v2`. `test_released_experiment_definition_requires_a_new_revision_for_changes` pins the released definition. Keys are not automatically derived; future comparable-rule changes still require deliberate versioning. |
+| B5: accidental restart or mode switch | Done for R, New game, and C | `Session.confirm` asks after a swap in an unfinished run. Esc clears selection first, then can quit; quitting still does not save a run. |
+| Efficiency statistics and ranking | Done | Schema v2 stores material left, swaps, and stirs. Adventure ranks by material left descending, swaps ascending, then points descending. Older rows without material statistics follow rows with them. Stirs do not affect rank. |
+| Target progress and stir feedback | Done | `AdventureView.panel` shows points to go, stirs, and exhausted reserves. End screens show material left, consumption, swaps, and stirs. |
+| Material counter padding | Done | Adventure renders material left without zero-padding. |
+| Grades / O1 and O2 objectives | Open | Ranking is implemented; medals, higher target tiers, efficiency win conditions, and continuing after success are not. |
+| Campaign, authored kits, recovery, save/replay | Open | Still one generated starting board and one score-target experiment; no unlocks, refunds, or mid-run persistence. |
+
+The launch name is now `--mode adventure`; `--mode adventure-first-v1` remains
+an alias. Current runs use experiment revision `adventure-first-v2`, with the
+original revision available separately in score history. The kit remains 64
+starting tiles plus 20 reserves per element, target 3,500, default seed 42.
+Success is evaluated after the full cascade, and only wins are saved.
+
+## Remaining next steps
+
+These are candidates for the next work, not newly approved gameplay changes.
+
+1. **Playtest the current efficiency-ranked experiment.** Check pacing, reserve
+   clarity, free-stir frequency, and sparse-board decisions before changing balance.
+   The old simulation scripts are absent; restore or recreate them before claiming
+   fresh measurements or using the historical thresholds as tuned targets.
+2. **Choose the next difficulty feature.** Grades/efficiency objectives and optional
+   stir limits, costs, or ranking tie-breakers remain alternatives. Free stirs are
+   the current baseline; no alternative has been selected. Version any changed
+   experiment rules so existing records retain their meaning.
+3. **Consider authored kits and additional objectives** (O3–O8, O11), then an
+   experiment selector and progression if playtesting supports them. Reserve
+   tuples are already configurable in code, but no scarce-kit experiment ships.
+4. **Add versioned mid-run saves/replays** when longer runs or progression justify
+   them; define compatibility across experiment and engine changes.
+5. **Evaluate recovery/distillate and new tile mechanics** after the finite-material
+   baseline is playtested. Recovery overlap and conservation rules remain undecided.
+6. **Optional presentation work:** guided onboarding, reserve-fill colours/flasks,
+   notebook text, and forced-move feedback. Progress text, stir counts, restart
+   confirmation, and unpadded material counts are already complete.
+
+See [the latest stir-difficulty note](design_notes.md#future-option-stirs-as-a-difficulty-setting-noted-2026-11-01)
+for the last recorded design discussion.
+
+## Historical review — 0.1.5
+
+The remainder preserves the original observations and proposals. Read the status
+table above before treating any finding as an open issue. Proposed effort estimates
+and balance thresholds have not been revalidated against 0.1.7.
+
+## How Adventure worked at the original review
 
 - **One experiment, "First Transmutation"** (`adventure.py:9-19`). It uses the four elements on an 8×8 board, with straight-line matches of 4 or more and the same scoring as Classic, including the L/T/plus bonuses and the cascade multiplier.
 - **The goal is to reach 3,500 points.** There's no move limit (`modes.py:190-203`, `moves=None`).
@@ -53,6 +144,8 @@ More numbers, for seed 42 unless noted:
 
 ## 1. Bugs and softlocks found
 
+*0.1.7 reconciliation: Known case fixed; bounded-search limitation remains; see the status table above.*
+
 **B1. The stir search gives up when a valid layout exists ("false stall").** Severity: low today, higher once targets rise.
 - **Reproduce:** `python sim/repro_false_stall.py`. It plays seed 42 with the target raised to 999,999, using random choices from `Random(32)`.
 - **Observed:** the game ends `stalled` with the message "no playable layout found". Nine tiles are left (3 fire, 4 air, 2 earth).
@@ -64,10 +157,14 @@ More numbers, for seed 42 unless noted:
   - Or enumerate every layout when the tile count is small.
 - **Impact today:** at target 3,500 the player almost always wins before this point, so it was never observed there. Any harder experiment will hit it. Players would see an unfair loss.
 
+*0.1.7 reconciliation: Done; see the status table above.*
+
 **B2. The stall message blames the layout search when the material is simply gone.** Severity: UX, reproduced.
 - **Reproduce:** `python sim/repro_message.py`. Four tiles are left, none of them four of a kind, and the message still reads "Experiment stalled: no playable layout found."
 - **Where:** `adventure.py:47-48` returns `False` without saying why, `adventure.py:111` sets the message, and `app.py:356-357` shows "No playable layout found. Try again!"
 - **Fix:** have `stir` return a reason, and say "Out of material: fewer than four of any element remain (12 tiles stranded)". Also show the gap ("50 points short").
+
+*0.1.7 reconciliation: Done; see the status table above.*
 
 **B3. Adventure's scoreboard Tab cycles into Classic's legacy score categories.** Severity: minor UX, reproduced.
 - **Reproduce:** `score_categories('adventure-first-v1', 'Adventure')` returns Adventure's own category, then four `classic-30` legacy categories.
@@ -75,7 +172,11 @@ More numbers, for seed 42 unless noted:
 - **Where:** `scores.py:35-37`, which always appends `HISTORICAL_CATEGORIES`, used by `app.py:112,190`.
 - **Fix:** only append the historical categories for `classic-30`.
 
+*0.1.7 reconciliation: Guarded by explicit revision and regression test; see the status table above.*
+
 **B4. (Possible) The leaderboard key doesn't include the experiment settings.** Scores are partitioned by mode key, scoring rules and seed (`app.py:260-261`, `scores.py:136-146`). The target and reserves (`Experiment`) are not part of the key. Changing the target or kit without also renaming `adventure-first-v1` would silently mix incomparable results. Today this depends on remembering to bump the key, and the README says results are stored "under their own experiment revision". **Fix:** derive the key from a hash of the `Experiment` fields, or add a `revision` field to `Experiment` and assert on it in a test.
+
+*0.1.7 reconciliation: Done for restart and mode switching; see the status table above.*
 
 **B5. (Design risk) A whole run can be lost with one key and no confirmation.** R, C and the New game button all call `start_new_game()` immediately (`app.py:200-208`, `app.py:222-224`), even mid-run. Runs are short (15–30 swaps), so this costs minutes, not hours. It still deserves a confirmation, or an undo, once runs get longer or experiments chain together.
 
@@ -171,7 +272,7 @@ Each idea below is marked with implementation effort. They all reuse `Experiment
 
 ---
 
-## Prioritized next steps
+## Original priority list (superseded by Remaining next steps)
 
 1. **Fix B2 and B3** (correct stall message and shortfall; Adventure-only score categories). Small.
 2. **Add graded targets and rank by efficiency** (O1 and O2; store material left and swaps). This gives the existing experiment real tension and makes skill visible. Small.
@@ -180,7 +281,7 @@ Each idea below is marked with implementation effort. They all reuse `Experiment
 5. **Build a 4–6 experiment Nigredo→Rubedo sequence** from O3–O7, with unlock and grade persistence and a seed-plus-move-log save. Medium.
 6. **Recovery/distillate and the recipe ideas** (O9, O12) once the core loop has been playtested. Large.
 
-## Reproducing the numbers
+## Historical reproduction commands (scripts not included)
 
 ```sh
 cd sim

@@ -46,7 +46,7 @@ Or install into your Python environment with `python -m pip install -e .`, then 
 
 ## Game modes
 
-Three modes are available. Press **C** to switch, or start in one with
+Six modes are available. Press **C** to switch, or start in one with
 `alchemy --mode <key>`. Switching begins a new experiment, and each mode keeps its own
 high-score ranking.
 
@@ -54,6 +54,9 @@ high-score ranking.
 | --- | --- | --- | --- | --- |
 | `classic-30` | Classic (default) | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
 | `adventure` | Adventure | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
+| `adventure-3` | Adventure Hard (3 stirs) | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
+| `adventure-5` | Adventure Medium (5 stirs) | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
+| `adventure-8` | Adventure Easy (8 stirs) | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
 | `diagonal-30` | Diagonal | the four elements plus sun | any touching symbol, diagonals included | rows, columns, and both diagonals |
 
 **Classic** is the primary mode. Four elements for a match-four game keeps about 4.5 legal
@@ -99,6 +102,48 @@ in Adventure scores shows the original revision separately, with unavailable
 efficiency statistics clearly labeled. The earlier launch name
 `--mode adventure-first-v1` still works. The initial target is for playtesting;
 campaign progression and reactant recovery are future work.
+
+### Adventure difficulty
+
+Choose a difficulty by its automatic stir allowance:
+
+- **Easy — 8 stirs:** `uv run alchemy --mode adventure-8`
+- **Medium — 5 stirs:** `uv run alchemy --mode adventure-5`
+- **Hard — 3 stirs:** `uv run alchemy --mode adventure-3`
+
+All appear when cycling modes with **C**. The starting kit, seed 42, 3,500-point target, and scoring
+are identical to unlimited Adventure; the sidebar shows stirs left.
+
+Using the final stir does not end the run: keep playing until you win, run out of
+matching material, or need another stir with none left. The full cascade finishes
+before the result is checked, and reaching the target takes priority. Failed layout
+searches still end the experiment without consuming a successful stir.
+
+Each variant has separate efficiency-ranked scores (`adventure-3-v1`,
+`adventure-5-v1`, and `adventure-8-v1`). **R** retries the same variant with its full stir allowance.
+These difficulty names were selected after initial playtesting. The existing
+launch names and score partitions are unchanged.
+The original `adventure` mode keeps unlimited free stirs and its existing scores.
+
+### Adventure efficiency medals
+
+Reach the 3,500-point target to earn a medal based on **material left after the
+entire final cascade** (board tiles plus reserves):
+
+| Medal | Material left on a successful run |
+| --- | --- |
+| Bronze | 0–29 |
+| Silver | 30–44 |
+| Gold | 45 or more |
+
+These thresholds apply to Easy, Medium, Hard, and unlimited Adventure. Stirs and
+swaps do not change the medal; each difficulty keeps its separate ranking.
+The material counter shows the Silver and Gold goals, and wins show their medal
+on the completion screen and local scoreboard. Stalled or unfinished runs earn
+no medal. Existing saved wins with material statistics also display medals; older
+wins without those statistics remain ungraded. Ranking and saved score values
+are unchanged. These initial thresholds are informed by automated runs and remain
+subject to human playtesting; see [the calibration notes](docs/medal_calibration.md).
 
 Earlier five-element, straight-lines-only play is retired. Scores set under those rules are
 kept and shown as **legacy** scores: open the scoreboard with **L** and press **Tab** to

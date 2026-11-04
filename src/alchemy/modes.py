@@ -7,7 +7,7 @@ MODE column), while `scores.RULES` versions the scoring formula itself.
 Adventure is the exception: it records under its experiment's own key (see
 `adventure.Experiment`), so its mode key only names the mode on the command line.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 # Each unordered direction appears once: (-1, 1) covers the anti-diagonal both ways.
 ORTHOGONAL = ((1, 0), (0, 1))
@@ -92,7 +92,17 @@ ADVENTURE = Mode(
               'L +100 / T +150 / Plus +200.'),
 )
 
-MODES = {mode.key: mode for mode in (CLASSIC, DIAGONALS, ADVENTURE)}
+ADVENTURE_3 = replace(ADVENTURE, key='adventure-3', label='Adventure / Hard',
+                      caption='Alchemy | Adventure / Hard', tagline='One experiment. Three stirs.',
+                      practice=ADVENTURE.practice[:3] + ('Up to 3 automatic stirs per run.', ADVENTURE.practice[4]))
+ADVENTURE_5 = replace(ADVENTURE, key='adventure-5', label='Adventure / Medium',
+                      caption='Alchemy | Adventure / Medium', tagline='One experiment. Five stirs.',
+                      practice=ADVENTURE.practice[:3] + ('Up to 5 automatic stirs per run.', ADVENTURE.practice[4]))
+ADVENTURE_8 = replace(ADVENTURE, key='adventure-8', label='Adventure / Easy',
+                      caption='Alchemy | Adventure / Easy', tagline='One experiment. Eight stirs.',
+                      practice=ADVENTURE.practice[:3] + ('Up to 8 automatic stirs per run.', ADVENTURE.practice[4]))
+ADVENTURE_MODES = (ADVENTURE, ADVENTURE_3, ADVENTURE_5, ADVENTURE_8)
+MODES = {mode.key: mode for mode in (CLASSIC, DIAGONALS, *ADVENTURE_MODES)}
 # Earlier --mode names that still work. 0.1.5 and 0.1.6 named Adventure after its
 # first experiment revision; its scores keep that key either way.
 MODE_ALIASES = {'adventure-first-v1': 'adventure'}

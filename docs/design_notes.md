@@ -1,8 +1,34 @@
 # alchemy — review and improvements
 
-## Implementation update
+## Current implementation — reconciled 2026-11-03
 
-The original review below is retained as historical context. The current working version fixes per-line scoring, custom-image fallback, screenshot and display errors, safe cycling hints, consistent resolve results, coordinate/volume validation, import guards, and safe artwork regeneration. It adds resizable rendering, reaction score breakdowns, explicit artwork overrides, case-insensitive sound extensions, and cross-platform installed-wheel CI. Solid blocks intentionally retain all qualifying plus bonuses; seeded restarts intentionally repeat the experiment. Version 0.1.0 has already been published; a new release needs a new version. Local scoreboards and limited-reactant difficulty remain future work.
+Local `main` at `68cfdd6` is version 0.1.7. Classic (four elements), Diagonal,
+and finite-reactant Adventure are implemented, with local scoreboards, shape
+bonuses, motion/reduced motion, keyboard play, restart confirmation, bundled fonts,
+and built-in tones. Input/session logic lives in `app.py`; drawing lives in
+`render.py`. The dependency is pygame-ce. CI is configured for Python 3.12–3.15
+on Linux, macOS, and Windows, with pytest, Ruff, and installed-wheel checks;
+pytest and Ruff are declared in the dev dependency group.
+
+The original scoring, image fallback, screenshot/display error, hint cycling,
+validation, and artwork-regeneration fixes are implemented. Local scoreboards
+and limited-reactant play are no longer future work. Adventure stores efficiency
+statistics and ranks by material left, then successful swaps, then points.
+Stirs remain free and excluded from ranking. Grades, additional experiments,
+campaign progression, recovery, and mid-run saves are still proposals.
+
+The [Adventure reconciliation](adventure_suggestions.md#current-status--reconciled-2026-11-03)
+tracks completed findings and the remaining backlog. The latest design discussion
+is [optional stir difficulty](#future-option-stirs-as-a-difficulty-setting-noted-2026-11-01);
+no alternative rule has been chosen.
+
+Everything below is a dated design/review archive, not a current task checklist.
+Old source line numbers, test totals, release instructions, and claims of pending
+work describe their original snapshots. In particular, the 0.1.0 setup/release
+instructions must not be followed as instructions to release the current version.
+See the [README](../README.md) and [changelog](../CHANGELOG.md) for current usage
+and release contents. This reconciliation checked source and existing tests; it
+did not rerun historical simulations or verify remote releases/CI results.
 
 ## Mode comparison: four elements vs diagonal matches (2026-10-10)
 
@@ -265,7 +291,7 @@ The rules layer is solid. Over 300 seeded games of random play, no invariant bro
 - **README:** document the exact scoring formula once bug 1 is settled, with a worked example. Say that R with `--seed` repeats the same board. Mention that the window is a fixed 1040×780 (a resizable or scaled window would help on small laptop screens).
 - **UX ideas:** cycle through hints, animate falling tiles, add keyboard or arrow-key play for accessibility, and show a "no more hints" or "game over" message when H is pressed after game over.
 
-## Next steps (in order)
+## Original 0.1.0 next steps (historical; superseded)
 1. Decide the "beyond four" rule. Fix `resolve()` or the README to match, and add scoring tests.
 2. Add safe image loading with fallback (`is_file()` and `try/except`) and a helper that can be tested.
 3. Validate `--screenshot` early, and catch `set_mode` failures, so no user-facing tracebacks remain.
@@ -275,7 +301,7 @@ The rules layer is solid. Over 300 seeded games of random play, no invariant bro
 6. Release 0.1.0 as `alchemy-game` once you've done the one-time PyPI setup under "Releasing" below. The PyPI name item is resolved: `alchemy` belongs to catalyst-team.
 7. Refactor `app.main()` into testable pieces, then add UI-logic tests.
 
-## Releasing
+## Original 0.1.0 release setup (historical)
 
 Packaging is ready for 0.1.0. The distribution name is `alchemy-game`; the import and the `alchemy` command are unchanged. Releases go out through `.github/workflows/publish.yml` using PyPI **Trusted Publishing** (OIDC), so no API token is stored anywhere.
 
@@ -453,7 +479,9 @@ and Diagonal history remains accessible. Saving uses Experiment.key; the changed
 stir policy is revision adventure-first-v2. The original launch option is retained.
 A definition regression test guards the released kit and objective.
 
-The 3,500 target, point ranking, free stirs, and no-refund policy remain unchanged.
+At this follow-up, the 3,500 target, point ranking, free stirs, and no-refund
+policy remained unchanged. Version 0.1.7 later replaced point ranking with
+efficiency ranking; the target, free stirs, and no-refund policy still apply.
 Efficiency grades, notebook/experiment selection, further objectives, and versioned
 run saving are deferred until this feedback and record collection is playtested.
 
@@ -468,3 +496,57 @@ rank stirs as a tie-breaker after swaps; cost a few points or a move per stir; o
 allow only a limited number of stirs per run. Any of these changes how runs compare,
 so it would need its own experiment key or revision (as adventure-first-v2 did) so
 existing records are not re-ranked under the new rules.
+
+### Stir-limit playtest variants implemented (2026-11-03)
+
+The first selected trials are `adventure-3` and `adventure-5`: caps of three and
+five successful automatic stirs. Unlimited Adventure remains available. Each trial
+has a separate experiment key (`adventure-3-v1`, `adventure-5-v1`) and scoreboard;
+all other kit/objective settings match First Transmutation. The sidebar shows the
+remaining allowance. Spending the last stir permits continued play until another
+stir is needed; target success after the complete cascade takes priority.
+Insufficient material and unsuccessful layout searches keep distinct stall reasons.
+These limits still need human playtesting and balance measurement; they are not
+established difficulty tiers. Stir costs and ranking tie-breakers remain deferred.
+
+Initial smoke comparison: 50 random-policy runs per variant, all starting on game
+seed 42, with independent move-choice generators `Random(0)` through `Random(49)`.
+At each turn the policy chose uniformly from `legal_moves`, then resolved the full
+cascade. Unlimited Adventure won 50/50 (mean 4.58 stirs, maximum 9); Adventure 3
+won 17/50, with 33 stir-limit stalls; Adventure 5 won 33/50, with 17 stir-limit
+stalls. This small single-board sample checks that the limits affect outcomes; it
+is not a skill comparison or a calibrated estimate of human difficulty.
+
+### Eight-stir comparison (2026-11-03)
+
+After trying both limited variants, the player reported getting far in both and
+having 15 material left in the five-stir run. The outcome of that run was not
+specified. Three and five stirs are acceptable for now and remain the likely
+release choices. Added `adventure-8` with its own `adventure-8-v1` scores solely
+for comparison; no release or push decision has been made for it. Kit, target,
+seed, ranking, and final-stir behavior match the other limited variants.
+
+### Adventure difficulty names selected (2026-11-03)
+
+Following human playtesting, the selected tiers are Easy (8 stirs), Medium (5),
+and Hard (3). This supersedes the earlier comparison-only status of eight stirs.
+The UI and documentation use these names; CLI keys and experiment score keys
+remain unchanged, so existing results stay in their original partitions.
+Unlimited Adventure remains available. This naming decision does not change the
+kit, target, scoring, or stir rules and does not itself publish or push a release.
+
+### Efficiency medals implemented (2026-11-03)
+
+The first medal thresholds are Bronze for any win, Silver at 30 material left,
+and Gold at 45. They apply after the full winning cascade to Easy, Medium, Hard,
+and unlimited Adventure. Stirs do not affect medals. The completion screen and
+scoreboard display awards; old wins with material statistics can be graded without
+a database migration, and unknown statistics never receive an invented medal.
+Medals are derived display values, not saved competitive rules or ranking keys.
+The v1 constants in `medals.py` should stay stable so existing wins keep their
+awards; future threshold changes need an explicit historical-award policy.
+
+See [calibration](medal_calibration.md): 960 runs across two policies, a seed sweep,
+and fixed seed 42 informed these initial thresholds. The visible-reaction policy
+did not consistently outperform random play; this is an initial tuning sample,
+not proof of skill separation or final balance. Human playtesting is next.

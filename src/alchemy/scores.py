@@ -46,7 +46,7 @@ def score_categories(mode_key, mode_label):
     """Current ranking first, then original historical partitions (never migrated)."""
     current = (ScoreCategory(f'{mode_label} / current', mode_key, RULES),)
     if mode_key.startswith('adventure-'):
-        history = (() if mode_key == 'adventure-first-v1' else
+        history = (() if mode_key != 'adventure-first-v2' else
                    (ScoreCategory('First Transmutation / original rules', 'adventure-first-v1', RULES),))
         return current + history
     return current + HISTORICAL_CATEGORIES

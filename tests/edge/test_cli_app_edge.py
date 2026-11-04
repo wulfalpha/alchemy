@@ -286,16 +286,18 @@ def test_hint_on_dead_board_does_not_crash():
 
 
 def test_mode_key_cycles_and_starts_a_new_game():
+    from alchemy.adventure import AdventureGame
+    from alchemy.modes import MODES
+
     def script(frame, st):
-        if frame in (1, 2, 3):
+        if frame <= len(MODES):
             return [key(pygame.K_c)]
         return [pygame.event.Event(pygame.QUIT)]
     st = drive(script)
-    keys = [g.mode.key for g in st['games']]
-    assert len(keys) == 4                 # one game at startup, one per press
-    assert keys[0] != keys[1]             # the press moved to the other mode
-    assert keys[2] == 'adventure'
-    assert keys[3] == keys[0]             # and cycling wraps back around
+    keys = [g.experiment.key if isinstance(g, AdventureGame) else g.mode.key
+            for g in st['games']]
+    assert keys == ['classic-30', 'diagonal-30', 'adventure-first-v2',
+                    'adventure-3-v1', 'adventure-5-v1', 'adventure-8-v1', 'classic-30']
 
 
 def test_completed_game_saved_once_after_last_cascade(tmp_path):
@@ -456,7 +458,7 @@ def test_adventure_mode_name_and_old_alias_both_start_adventure(name):
 
 def test_mode_help_lists_only_current_names():
     r = run('--help')
-    assert '{adventure,classic-30,diagonal-30}' in r.stdout and 'first-v1' not in r.stdout
+    assert '{adventure,adventure-3,adventure-5,adventure-8,classic-30,diagonal-30}' in r.stdout and 'first-v1' not in r.stdout
     assert run('--smoke-test', '--mode', 'adventure-first-v1').returncode == 0
     bad = run('--mode', 'adventure-first-v9')
     assert bad.returncode == 2 and "invalid choice: 'adventure-first-v9'" in bad.stderr
@@ -539,3 +541,17 @@ def test_escape_deselects_before_quitting():
     with patcher:
         st = drive(script)
     assert seen['selected'] is None and st['frame'] == 3  # first Esc deselected; second quit
+
+
+@pytest.mark.parametrize('limit', [3, 5, 8])
+def test_limited_adventure_launch_and_restart_keep_experiment(limit):
+    def script(frame, st):
+        game = st['games'][-1]
+        assert game.experiment.stir_limit == limit
+        assert game.experiment.key == f'adventure-{limit}-v1'
+        if frame == 1:
+            game.stirs = limit
+            return [pygame.event.Event(pygame.KEYDOWN, key=pygame.K_r)]
+        assert game.stirs == 0
+        return [pygame.event.Event(pygame.QUIT)]
+    drive(script, argv=('--mode', f'adventure-{limit}'))

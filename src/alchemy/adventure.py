@@ -1,9 +1,10 @@
 """Finite material experiments; reaction scoring is shared with Classic."""
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .board import Game, SIZE, matches, legal_moves
 from .modes import ADVENTURE
+from .medals import efficiency_medal
 
 
 @dataclass(frozen=True)
@@ -14,9 +15,16 @@ class Experiment:
     reserves: tuple = (20, 20, 20, 20)
     seed: int = 42
     stir_attempts: int = 200
+    stir_limit: int | None = None
 
 
 FIRST_EXPERIMENT = Experiment()
+EXPERIMENTS = {
+    'adventure': FIRST_EXPERIMENT,
+    'adventure-3': replace(FIRST_EXPERIMENT, key='adventure-3-v1', stir_limit=3),
+    'adventure-5': replace(FIRST_EXPERIMENT, key='adventure-5-v1', stir_limit=5),
+    'adventure-8': replace(FIRST_EXPERIMENT, key='adventure-8-v1', stir_limit=8),
+}
 
 
 def finite_refill(grid, cleared, reserves, rng):
@@ -139,6 +147,10 @@ class AdventureGame(Game):
         return self.outcome is not None
 
     @property
+    def medal(self):
+        return efficiency_medal(self.material_left) if self.outcome == 'success' else None
+
+    @property
     def points_remaining(self):
         return max(0, self.experiment.target-self.score)
 
@@ -146,7 +158,14 @@ class AdventureGame(Game):
     def failure_summary(self):
         if self.failure_reason == 'insufficient_material':
             return 'Too few of each element for another match.'
+        if self.failure_reason == 'stirs_exhausted':
+            return 'No stirs left to rearrange the vessel.'
         return 'Stir could not find a playable arrangement.'
+
+    @property
+    def stirs_remaining(self):
+        limit = self.experiment.stir_limit
+        return None if limit is None else max(0, limit-self.stirs)
 
     @property
     def material_left(self):
@@ -169,15 +188,21 @@ class AdventureGame(Game):
             self.outcome = 'success'
             self.message = 'Experiment complete: target reached!'
         elif not legal_moves(self.grid, self.mode):
-            if stir(self.grid, self.rng, self.mode, self.experiment.stir_attempts):
+            counts = Counter(v for row in self.grid for v in row if v is not None)
+            if max(counts.values(), default=0) < 4:
+                self.outcome = 'stalled'
+                self.failure_reason = 'insufficient_material'
+            elif self.stirs_remaining == 0:
+                self.outcome = 'stalled'
+                self.failure_reason = 'stirs_exhausted'
+            elif stir(self.grid, self.rng, self.mode, self.experiment.stir_attempts):
                 self.stirs += 1
                 self.message = 'Vessel stirred: the same material, rearranged.'
                 events.append('shuffle')
             else:
                 self.outcome = 'stalled'
-                counts = Counter(v for row in self.grid for v in row if v is not None)
-                self.failure_reason = ('insufficient_material' if max(counts.values(), default=0) < 4
-                                       else 'search_exhausted')
+                self.failure_reason = 'search_exhausted'
+            if self.outcome == 'stalled':
                 self.message = f'{self.failure_summary} {self.points_remaining:,} points short.'
         if self.finished:
             events.append('game_over')

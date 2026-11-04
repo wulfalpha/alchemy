@@ -14,8 +14,7 @@ from alchemy.board import (Game, SIZE, adjacent, legal_moves, matched_runs, matc
                            shape_crossings, swap)
 from alchemy.modes import CLASSIC, DEFAULT_KEY, DIAGONAL, DIAGONALS, MODES, ORTHOGONAL, Mode
 from alchemy.scores import Scoreboard
-from alchemy.adventure import AdventureGame
-from alchemy.modes import ADVENTURE
+from alchemy.adventure import AdventureGame, EXPERIMENTS
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -30,7 +29,7 @@ def dead_grid(mode):
 def test_registry_is_keyed_consistently_and_defaults_to_classic():
     assert all(key == mode.key for key, mode in MODES.items())
     assert DEFAULT_KEY == CLASSIC.key == 'classic-30'
-    assert set(MODES) == {'classic-30', 'diagonal-30', 'adventure'}  # five-element play is retired
+    assert set(MODES) == {'classic-30', 'diagonal-30', 'adventure', 'adventure-3', 'adventure-5', 'adventure-8'}  # five-element play is retired
 
 
 @pytest.mark.parametrize('key', sorted(MODES))
@@ -66,7 +65,7 @@ def test_classic_plays_a_complete_game_with_only_four_elements():
 def test_grid_values_always_index_into_the_palette(key):
     """The renderer indexes mode.colors[value] directly, with no clamp."""
     mode = MODES[key]
-    game = AdventureGame(11) if mode == ADVENTURE else Game(11, mode)
+    game = AdventureGame(11, EXPERIMENTS[key]) if key in EXPERIMENTS else Game(11, mode)
     for _ in range(5):
         assert all(v is None or 0 <= v < len(mode.colors) for row in game.grid for v in row)
         moves = legal_moves(game.grid, mode)

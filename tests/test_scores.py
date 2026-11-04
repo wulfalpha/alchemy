@@ -1,3 +1,4 @@
+import pytest
 import sqlite3
 from unittest.mock import patch
 
@@ -151,3 +152,17 @@ def test_classic_still_ranks_by_points_even_with_stats(tmp_path):
     scores.record('high', 'Ada', 900)
     assert [r['id'] for r in scores.top()] == ['high', 'low']
     scores.close()
+
+
+@pytest.mark.parametrize('limit', [3, 5, 8])
+def test_limited_adventure_scores_are_isolated(tmp_path, limit):
+    from alchemy.adventure import EXPERIMENTS
+    from alchemy.scores import score_categories
+    board = Scoreboard(tmp_path)
+    for name, experiment in EXPERIMENTS.items():
+        board.record(name, name, 3500, 42, mode=experiment.key,
+                     material_left=20, swaps=25, stirs=2)
+    key = EXPERIMENTS[f'adventure-{limit}'].key
+    assert [row['player'] for row in board.top(42, mode=key)] == [f'adventure-{limit}']
+    assert [category.mode for category in score_categories(key, 'Adventure')] == [key]
+    board.close()
