@@ -2,7 +2,7 @@
 
 ## Current implementation — reconciled 2026-11-03
 
-Local `main` at `68cfdd6` is version 0.1.7. Classic (four elements), Diagonal,
+Local `main` at `f9b9510` is version 0.1.8 (Adventure difficulties and medals). Classic (four elements), Diagonal,
 and finite-reactant Adventure are implemented, with local scoreboards, shape
 bonuses, motion/reduced motion, keyboard play, restart confirmation, bundled fonts,
 and built-in tones. Input/session logic lives in `app.py`; drawing lives in
@@ -19,8 +19,9 @@ campaign progression, recovery, and mid-run saves are still proposals.
 
 The [Adventure reconciliation](adventure_suggestions.md#current-status--reconciled-2026-11-03)
 tracks completed findings and the remaining backlog. The latest design discussion
-is [optional stir difficulty](#future-option-stirs-as-a-difficulty-setting-noted-2026-11-01);
-no alternative rule has been chosen.
+is [unstable elements](#unstable-elements-proposed-design-2026-11-04), agreed but
+not yet implemented. Stir costs and stir tie-breakers remain deferred; the
+Easy/Medium/Hard stir caps shipped in 0.1.8.
 
 Everything below is a dated design/review archive, not a current task checklist.
 Old source line numbers, test totals, release instructions, and claims of pending
@@ -550,3 +551,94 @@ See [calibration](medal_calibration.md): 960 runs across two policies, a seed sw
 and fixed seed 42 informed these initial thresholds. The visible-reaction policy
 did not consistently outperform random play; this is an initial tuning sample,
 not proof of skill separation or final balance. Human playtesting is next.
+
+## Unstable elements: proposed design (2026-11-04)
+
+Agreed in discussion; nothing is implemented yet. Numbers marked *initial* are
+starting points for playtesting, not tuned values.
+
+### Concept
+
+Skilful matches leave behind an **unstable** tile of the matched element. It
+looks different but behaves as an ordinary tile of its element: it swaps,
+matches, and counts towards legal moves as usual. When a later match includes
+it, it detonates and clears extra tiles. Unstable tiles are earned only through
+skill (match shape), never spawned at random.
+
+### Three tiers
+
+| Earned by | Tier | Detonation clears |
+| --- | --- | --- |
+| A straight run of exactly 5 | **Line** | The full board line through the tile, in the direction of the run that triggered it (row, column, or diagonal in Diagonal mode) |
+| An L or T crossing | **Square** | The 3×3 block centred on the tile |
+| A plus crossing, or a straight run of 6+ | **Element** | Every tile on the board of the tile's own element (reserves are untouched) |
+
+The hardest patterns earn the strongest tile. Element clears use the tile's own
+element so no extra selection step is needed; the player chooses by choosing
+which unstable tile to trigger.
+
+### Creation rules (initial)
+
+- One unstable tile per qualifying run or crossing. A run that forms part of an
+  L, T, or plus earns only the shape's tile, not a separate run tile as well.
+- The new tile replaces one of the cleared cells instead of being refilled:
+  the swapped cell if it belongs to the run, otherwise the crossing cell,
+  otherwise the middle of the run.
+- Cascades can create unstable tiles too. This rewards setting up cascades
+  and keeps the rules uniform. Revisit if they appear too often to feel earned.
+
+### Detonation rules (initial)
+
+- A run that contains an unstable tile detonates it. Line tiles in a crossing
+  clear both lines.
+- An unstable tile caught in another detonation also detonates (chain
+  reaction), resolved within the same step, before refill.
+- Tiles cleared by a detonation score **50 points each** (*initial*), times the
+  current cascade multiplier, on top of the ordinary match points. The status
+  line names the reaction, e.g. "Line reaction".
+
+### Adventure: why the payout is above 35 points per tile
+
+Detonations consume material, and Adventure ranks by material left. A run
+starts with 144 tiles (64 on the board, 80 in reserve). Gold requires 45 left, so
+at most 99 tiles may be spent to reach 3,500: about **35 points per tile**.
+Ordinary matches pay a base of 25 per tile, plus bonuses. Paying more than
+35 per detonated tile makes a well-placed detonation improve rank and medals,
+while a poorly timed one still wastes material. Returning detonated tiles to
+the reserves was considered and deferred: it introduces a new conservation
+rule, and should be tried only if the points approach fails in playtesting.
+
+### Implementation sketch
+
+- Keep the grid as plain element ints so `matched_runs`, `legal_moves`, and
+  hints are unchanged. Store unstable tiles in a parallel mapping on `Game`
+  (`{(x, y): tier}`) that `swap`, `refill`/`finite_refill`, and stirs carry
+  along with the tiles. New boards and stirs must not invent unstable tiles.
+- `resolve` gains: classify runs and crossings for creation, expand the
+  cleared set by detonations until stable, score, then refill around the
+  surviving new unstable tiles.
+- Presentation: a per-tier overlay on the symbol, a short detonation flash
+  (respecting reduced motion), and one synthesised tone per tier.
+
+### Records and rollout
+
+1. **Classic first**, where points are the whole score. Scoring changes, so
+   Classic needs a new rules key. `scores.RULES` (`shapes-v3`) is currently
+   shared by Classic and Diagonal, so rules keys must become per-mode, or both
+   modes move to a new key together. Old `shapes-v3` scores stay reachable.
+2. Playtest in Classic: frequency of each tier, whether the payout is too
+   strong, and readability of chain reactions.
+3. **Then Adventure**, with new experiment keys for each difficulty (as
+   `adventure-first-v2` did) and a re-run of `tools/measure_adventure.py` to
+   check whether the v1 medal thresholds still fit. If not, medals need the
+   historical-award policy noted above.
+4. **Diagonal** later, if at all: diagonal clears are already large, and the
+   Line tier's diagonal behaviour needs separate playtesting.
+
+### Open questions
+
+- Should swapping two unstable tiles together trigger a combined effect, as in
+  other match games? Out of scope for the first version.
+- Is a 6+ run too easy a route to the Element tier compared with a plus?
+- Do chain reactions need a cap, or does the 8×8 board
+  limit them enough?
