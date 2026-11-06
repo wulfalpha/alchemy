@@ -3,7 +3,8 @@ from alchemy.adventure import AdventureGame
 from alchemy.board import (ELEMENT, LINE, SIZE, SQUARE, UNSTABLE_POINTS, Game, blast_cells, detonate,
                            fall_positions, matched_runs, shape_crossings, unstable_births)
 from alchemy.modes import CLASSIC, DIAGONALS
-from alchemy.scores import RULES, score_categories
+from alchemy.board import UNUSED_BONUS
+from alchemy.scores import RULES, UNSTABLE_V1_RULES, score_categories
 
 
 def quiet():
@@ -187,6 +188,8 @@ def test_a_fresh_board_has_no_unstable_symbols(monkeypatch):
     events = []
     game._settle(events)
     assert events == ['shuffle'] and game.unstable == {}
+    assert game.banked == {ELEMENT: 1} and game.banked_value == UNUSED_BONUS[ELEMENT]
+    assert f'1 unstable symbol banked (+{UNUSED_BONUS[ELEMENT]})' in game.message
 
 
 def test_diagonal_and_adventure_never_form_unstable_symbols():
@@ -203,6 +206,47 @@ def test_diagonal_and_adventure_never_form_unstable_symbols():
 def test_classic_keeps_its_previous_scores_one_tab_away():
     categories = score_categories(CLASSIC.key, CLASSIC.label, CLASSIC.rules)
     assert categories[0].rules == CLASSIC.rules != RULES
-    assert categories[1].rules == RULES and categories[1].mode == CLASSIC.key
-    assert len(categories) == 6
+    assert categories[1].rules == UNSTABLE_V1_RULES and categories[1].mode == CLASSIC.key
+    assert categories[2].rules == RULES and categories[2].mode == CLASSIC.key
+    assert 'without unused-symbol bonus' in categories[1].label
+    assert len(categories) == 7
     assert DIAGONALS.rules == RULES
+
+
+def finish(game):
+    """End a game by spending its last move without a reaction."""
+    game.moves = 0
+    events = []
+    game._settle(events)
+    return events
+
+
+def test_unused_symbols_on_the_board_and_in_the_bank_pay_once_at_the_end():
+    game = Game(3, CLASSIC)
+    game.score = 1000
+    game.unstable = {(0, 0): LINE, (5, 5): ELEMENT}
+    game.banked.update([SQUARE, SQUARE])
+    assert finish(game) == ['game_over']
+    expected = UNUSED_BONUS[LINE] + UNUSED_BONUS[ELEMENT] + 2 * UNUSED_BONUS[SQUARE]
+    assert game.unused_bonus == dict(on_board=2, banked=2, total=expected)
+    assert game.score == 1000 + expected          # flat: no cascade multiplier
+    game.cash_in()
+    assert game.score == 1000 + expected          # never paid twice
+
+
+def test_no_unused_symbols_means_no_bonus():
+    game = Game(3, CLASSIC)
+    finish(game)
+    assert game.unused_bonus == dict(on_board=0, banked=0, total=0)
+
+
+def test_modes_without_unstable_symbols_have_no_bonus():
+    game = Game(3, DIAGONALS)
+    finish(game)
+    assert game.unused_bonus is None
+
+
+def test_the_bonus_stays_below_a_typical_detonation():
+    # A Line clears its row: at least 4 extra tiles beyond a matched four.
+    assert UNUSED_BONUS[LINE] < 4 * UNSTABLE_POINTS
+    assert UNUSED_BONUS[LINE] < UNUSED_BONUS[SQUARE] < UNUSED_BONUS[ELEMENT]

@@ -6,13 +6,15 @@ from pathlib import Path
 import sqlite3
 import sys
 
-UNSTABLE_RULES = 'unstable-v1'  # Classic with unstable symbols
+UNSTABLE_RULES = 'unstable-v2'  # Classic with unstable symbols and the unused-symbol bonus
+UNSTABLE_V1_RULES = 'unstable-v1'  # Classic 0.1.9: unstable symbols, no unused-symbol bonus
 RULES = 'shapes-v3'          # Diagonal and Adventure; Classic before unstable symbols
 LEGACY_RULES = 'shapes-v2'   # retired five-element orthogonal play
 OLDEST_RULES = 'per-line-v1'
 # Released formula keys retained for compatibility; UI categories also include experiments.
-RULE_HISTORY = (UNSTABLE_RULES, RULES, LEGACY_RULES, OLDEST_RULES)
+RULE_HISTORY = (UNSTABLE_RULES, UNSTABLE_V1_RULES, RULES, LEGACY_RULES, OLDEST_RULES)
 RULE_LABELS = {UNSTABLE_RULES: 'Local high scores',
+               UNSTABLE_V1_RULES: 'Local high scores',
                RULES: 'Local high scores',
                LEGACY_RULES: 'Legacy scores / five elements',
                OLDEST_RULES: 'Legacy scores / per-line'}
@@ -44,6 +46,11 @@ HISTORICAL_CATEGORIES = (
 )
 
 
+# Earlier formula versions of a mode, newest first, shown right after its current ranking.
+SUPERSEDED_RULES = {UNSTABLE_RULES: ((UNSTABLE_V1_RULES, 'without unused-symbol bonus'),
+                                     (RULES, 'before unstable symbols'))}
+
+
 def score_categories(mode_key, mode_label, rules=RULES):
     """Current ranking first, then original historical partitions (never migrated)."""
     current = (ScoreCategory(f'{mode_label} / current', mode_key, rules),)
@@ -51,8 +58,8 @@ def score_categories(mode_key, mode_label, rules=RULES):
         history = (() if mode_key != 'adventure-first-v2' else
                    (ScoreCategory('First Transmutation / original rules', 'adventure-first-v1', RULES),))
         return current + history
-    if rules != RULES:
-        current += (ScoreCategory(f'{mode_label} / before unstable symbols', mode_key, RULES),)
+    for earlier, note in SUPERSEDED_RULES.get(rules, ()):
+        current += (ScoreCategory(f'{mode_label} / {note}', mode_key, earlier),)
     return current + HISTORICAL_CATEGORIES
 
 

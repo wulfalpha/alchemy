@@ -4,6 +4,7 @@ Every rule takes an optional `mode` (see `modes.py`) that supplies the symbol
 count and the directions a line may run in. It defaults to the primary mode, so
 `matches(grid)` and `Game()` keep working unchanged.
 """
+from collections import Counter
 from random import Random
 from .modes import DEFAULT_MODE, ORTHOGONAL
 
@@ -14,6 +15,10 @@ PLUS_BONUS = 200
 LINE, SQUARE, ELEMENT = 'line', 'square', 'element'
 UNSTABLE_TIERS = (LINE, SQUARE, ELEMENT)
 UNSTABLE_POINTS = 50   # per tile cleared by a detonation, before the cascade multiplier
+# Paid once when the game ends for each unstable symbol never detonated: those still on
+# the board plus those banked when a dead board was replaced. Kept below what a typical
+# detonation earns, so using a symbol is always the better play.
+UNUSED_BONUS = {LINE: 100, SQUARE: 150, ELEMENT: 200}
 
 
 def matched_runs(grid, mode=None):
@@ -222,6 +227,8 @@ class Game:
         self.unstable = {}         # cell -> tier; empty unless the mode enables them
         self.last_swap = ()
         self.last_cleared = set()  # cells the latest reaction removed (new unstable symbols stay)
+        self.banked = Counter()    # tier -> unstable symbols lost when a dead board was replaced
+        self.unused_bonus = None   # set when the game ends: see cash_in()
         self.message = 'Select a symbol, then an adjacent symbol.'
 
     @property
@@ -332,8 +339,29 @@ class Game:
     def _settle(self, events):
         if not self.pending and self.moves and not legal_moves(self.grid, self.mode):
             self.grid = new_grid(self.rng, self.mode)
-            self.unstable = {}
             self.message = 'No swaps left: a fresh board has been brewed.'
+            if self.unstable:
+                lost = len(self.unstable)
+                value = sum(UNUSED_BONUS[tier] for tier in self.unstable.values())
+                symbols = 'unstable symbol' if lost == 1 else 'unstable symbols'
+                self.message = f'No swaps left: fresh board.  {lost} {symbols} banked (+{value}).'
+            self.banked.update(self.unstable.values())
+            self.unstable = {}
             events.append("shuffle")
         if not self.pending and not self.moves:
+            self.cash_in()
             events.append("game_over")
+
+    @property
+    def banked_value(self):
+        return sum(UNUSED_BONUS[tier] * count for tier, count in self.banked.items())
+
+    def cash_in(self):
+        """Pay the unused-symbol bonus once, for symbols left on the board and in the bank."""
+        if self.unused_bonus is not None or not self.mode.unstable:
+            return
+        on_board = Counter(self.unstable.values())
+        total = self.banked_value + sum(UNUSED_BONUS[tier] * count for tier, count in on_board.items())
+        self.unused_bonus = dict(on_board=sum(on_board.values()), banked=sum(self.banked.values()),
+                                 total=total)
+        self.score += total

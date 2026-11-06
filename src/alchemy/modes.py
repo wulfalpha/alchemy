@@ -26,7 +26,7 @@ STRAIGHT_PRACTICE = ('Swap two neighboring symbols.',
 CLASSIC_PRACTICE = ('Swap two neighboring symbols.',
                     'Align 4 or more in a row or column.',
                     '5+ in a row, L, T, or plus: unstable symbol.',
-                    'Match it to detonate: +50 per extra tile.',
+                    'Detonate +50/tile; leftovers pay at the end.',
                     'L +100 / T +150 / Plus +200.')
 DIAGONAL_PRACTICE = ('Swap any touching symbols, diagonals too.',
                      'Align 4+ in rows, columns, or diagonals.',
@@ -72,7 +72,7 @@ CLASSIC = Mode(
     colors=ELEMENT_COLORS,
     practice=CLASSIC_PRACTICE,
     unstable=True,
-    rules='unstable-v1',
+    rules='unstable-v2',
 )
 
 DIAGONALS = Mode(
