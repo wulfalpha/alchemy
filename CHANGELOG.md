@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.9
 
 ### Classic
 - Add **unstable symbols**. Exactly five in a row leaves a **Line** symbol, six or more
