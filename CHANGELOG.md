@@ -10,6 +10,22 @@
 - Classic scores now save under the `unstable-v2` rules. 0.1.9 scores stay in a
   **Classic / without unused-symbol bonus** scoreboard category (press **Tab**).
 
+### Adventure
+- **Unstable symbols come to Adventure** (Easy, Medium, Hard, and unlimited). A stir
+  carries each one to a tile of its own element, so none are lost. Detonated tiles are
+  consumed and pay 50 points each, so a well-timed blast helps your medal. A newly
+  formed symbol keeps its tile. There is no bank or end bonus: unused symbols already
+  count as material left, and the win screen notes how many were left unspent.
+- **Medals are raised to Silver 40 and Gold 50** for the new revisions, because unstable
+  symbols make efficient play much stronger. Wins from earlier revisions keep their
+  original thresholds and medals.
+- New experiment revisions `adventure-first-v3`, `adventure-3-v2`, `adventure-5-v2`, and
+  `adventure-8-v2`. Earlier scores stay one **Tab** away under "before unstable symbols".
+
+### Development
+- `tools/measure_adventure.py` understands unstable symbols and gains `--before` to
+  measure the released revisions. Results are in `docs/medal_calibration_unstable.json`.
+
 ## 0.1.9
 
 ### Classic

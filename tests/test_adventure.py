@@ -168,7 +168,7 @@ def test_released_experiment_definition_requires_a_new_revision_for_changes():
     from dataclasses import asdict
     assert asdict(FIRST_EXPERIMENT) == dict(
         key='adventure-first-v2', title='First Transmutation', target=3500,
-        reserves=(20, 20, 20, 20), seed=42, stir_attempts=200, stir_limit=None)
+        reserves=(20, 20, 20, 20), seed=42, stir_attempts=200, stir_limit=None, unstable=False, medals=(30, 45))
 
 
 @pytest.mark.parametrize('limit', [3, 5, 8])
@@ -214,11 +214,13 @@ def test_success_and_material_exhaustion_take_priority_over_stir_limit(limit):
 
 
 @pytest.mark.parametrize('limit', [3, 5, 8])
-def test_limited_experiment_matches_unlimited_until_limit(limit):
-    from alchemy.adventure import EXPERIMENTS
-    config = EXPERIMENTS[f'adventure-{limit}']
-    assert config == replace(FIRST_EXPERIMENT, key=f'adventure-{limit}-v1', stir_limit=limit)
-    base, limited = AdventureGame(), AdventureGame(experiment=config)
+@pytest.mark.parametrize('released', [True, False])
+def test_limited_experiment_matches_unlimited_until_limit(limit, released):
+    from alchemy.adventure import EXPERIMENTS, PREVIOUS_EXPERIMENTS
+    experiments, revision = (PREVIOUS_EXPERIMENTS, 'v1') if released else (EXPERIMENTS, 'v2')
+    config = experiments[f'adventure-{limit}']
+    assert config == replace(experiments['adventure'], key=f'adventure-{limit}-{revision}', stir_limit=limit)
+    base, limited = AdventureGame(experiment=experiments['adventure']), AdventureGame(experiment=config)
     policy = Random(32)
     finishes = 0
     while not limited.finished:

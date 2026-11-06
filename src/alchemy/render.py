@@ -11,7 +11,8 @@ import math
 import pygame
 from .board import SIZE
 from .modes import ADVENTURE_MODES
-from .medals import efficiency_medal, SILVER_MATERIAL, GOLD_MATERIAL
+from .adventure import medal_thresholds
+from .medals import efficiency_medal
 
 WIDTH, HEIGHT = 1040, 780
 LEFT, TOP, TILE = 48, 154, 70
@@ -112,7 +113,7 @@ class ClassicView:
     def score_columns(self, canvas):
         canvas.text('DATE (UTC)', (440, 252), 14, MUTED)
 
-    def score_detail(self, canvas, entry, y):
+    def score_detail(self, canvas, entry, y, category=None):
         canvas.text(entry['completed'][:10], (440, y), 14, MUTED)
 
 
@@ -121,7 +122,7 @@ class AdventureView:
 
     def counter(self, game):
         return (str(game.material_left), 'MATERIAL LEFT',
-                f'Silver {SILVER_MATERIAL}+ / Gold {GOLD_MATERIAL}+')
+                'Silver {}+ / Gold {}+'.format(*game.experiment.medals))
 
     def panel(self, canvas, session):
         game = session.game
@@ -157,6 +158,10 @@ class AdventureView:
                         (122, 452), 16, MEDAL_COLORS[game.medal])
         canvas.text(f'Reactants consumed: {game.consumed}', (122, 478), 16)
         canvas.text(f'Successful swaps: {game.turns} / Stirs: {game.stirs}', (122, 504), 16)
+        unspent = len(game.unstable)
+        if game.outcome == 'success' and unspent:
+            canvas.text(f"{unspent} unstable symbol{'s' if unspent != 1 else ''} left unspent "
+                        '(counted in material left)', (122, 526), 14, MUTED)
         canvas.text('L: view scores    R: retry experiment', (122, 548), 16)
 
     note_color = MUTED
@@ -168,12 +173,13 @@ class AdventureView:
     def score_columns(self, canvas):
         canvas.text('MATERIAL LEFT', (440, 252), 14, MUTED)
 
-    def score_detail(self, canvas, entry, y):
+    def score_detail(self, canvas, entry, y, category=None):
         if entry['material_left'] is None:
             canvas.text('-', (440, y), 16, MUTED)
             canvas.text('Efficiency stats unavailable', (108, y+19), 14, MUTED)
         else:
-            medal = efficiency_medal(entry['material_left'])
+            thresholds = medal_thresholds(category.mode) if category else medal_thresholds(None)
+            medal = efficiency_medal(entry['material_left'], thresholds)
             canvas.text(f"{entry['material_left']} / {medal}", (440, y), 16, MEDAL_COLORS[medal])
             canvas.text(f"Swaps: {entry['swaps']} / Stirs: {entry['stirs']}", (108, y+19), 14, MUTED)
 
@@ -335,7 +341,7 @@ def draw_scoreboard(canvas, session, view):
         name = canvas.fit(f'{index+1:2}. {entry["player"]}', 240)
         canvas.text(name, (80, y), 16, GOLD if entry['id'] == session.run_id else TEXT)
         canvas.text(f'{entry["score"]:,}', (340, y), 16, GOLD)
-        view.score_detail(canvas, entry, y)
+        view.score_detail(canvas, entry, y, category)
     if not session.results:
         canvas.text('Complete an experiment to set a score.', (80, 300), 19)
     if len(session.categories()) > 1:

@@ -51,13 +51,23 @@ SUPERSEDED_RULES = {UNSTABLE_RULES: ((UNSTABLE_V1_RULES, 'without unused-symbol 
                                      (RULES, 'before unstable symbols'))}
 
 
+# Earlier revisions of each Adventure experiment, newest first. Labels take the mode label.
+_FIRST_ORIGINAL = ('adventure-first-v1', 'First Transmutation / original rules')
+EXPERIMENT_HISTORY = {
+    'adventure-first-v3': (('adventure-first-v2', '{} / before unstable symbols'), _FIRST_ORIGINAL),
+    'adventure-first-v2': (_FIRST_ORIGINAL,),
+    'adventure-3-v2': (('adventure-3-v1', '{} / before unstable symbols'),),
+    'adventure-5-v2': (('adventure-5-v1', '{} / before unstable symbols'),),
+    'adventure-8-v2': (('adventure-8-v1', '{} / before unstable symbols'),),
+}
+
+
 def score_categories(mode_key, mode_label, rules=RULES):
     """Current ranking first, then original historical partitions (never migrated)."""
     current = (ScoreCategory(f'{mode_label} / current', mode_key, rules),)
     if mode_key.startswith('adventure-'):
-        history = (() if mode_key != 'adventure-first-v2' else
-                   (ScoreCategory('First Transmutation / original rules', 'adventure-first-v1', RULES),))
-        return current + history
+        return current + tuple(ScoreCategory(label.format(mode_label), key, RULES)
+                               for key, label in EXPERIMENT_HISTORY.get(mode_key, ()))
     for earlier, note in SUPERSEDED_RULES.get(rules, ()):
         current += (ScoreCategory(f'{mode_label} / {note}', mode_key, earlier),)
     return current + HISTORICAL_CATEGORIES

@@ -20,7 +20,8 @@ campaign progression, recovery, and mid-run saves are still proposals.
 The [Adventure reconciliation](adventure_suggestions.md#current-status--reconciled-2026-11-03)
 tracks completed findings and the remaining backlog. The latest design discussion
 is [unstable elements](#unstable-elements-proposed-design-2026-11-04), implemented
-in Classic and awaiting playtesting. Stir costs and stir tie-breakers remain deferred; the
+in Classic (with an unused-symbol bank and bonus) and in Adventure (with raised medal
+thresholds). Diagonal remains without them. Stir costs and stir tie-breakers remain deferred; the
 Easy/Medium/Hard stir caps shipped in 0.1.8.
 
 Everything below is a dated design/review archive, not a current task checklist.
@@ -734,4 +735,21 @@ Adventure will not use a bank or bonus: a stir rearranges the same material, so
 unstable markers should travel with their tiles through a stir, and leftover
 symbols already count as material left. A finale where on-board symbols detonate
 in sequence at game end remains a possible later upgrade to the flat bonus.
+
+### Unstable symbols in Adventure implemented (2026-11-05)
+
+Step 3 of the rollout. New revisions `adventure-first-v3` and `adventure-3/5/8-v2`
+enable unstable symbols with the same tiers and 50-point detonations as Classic.
+Released definitions remain as `PREVIOUS_EXPERIMENTS`, and their scores are one
+**Tab** away. Adventure-specific rules:
+
+- A stir re-attaches each marker to a randomly chosen unmarked tile of its element
+  (`carry_markers`); a stir keeps every tile, so one always exists. No bank, no bonus.
+- Blast tiles are consumed; a newly formed symbol keeps its tile and is not consumed.
+
+Recalibration ([medal_calibration.md](medal_calibration.md#recalibration-with-unstable-symbols--2026-11-05))
+showed unstable symbols let efficient play clearly beat random for the first time,
+and made the old thresholds easy (Silver for 48 of 60 efficient default-kit runs). The
+player chose to raise the new revisions to **Silver 40, Gold 50**. Thresholds are now
+per revision (`Experiment.medals`), so earlier wins keep their 30/45 awards.
 

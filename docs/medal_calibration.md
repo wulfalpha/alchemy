@@ -1,5 +1,10 @@
 # Adventure medal calibration — 2026-11-03
 
+*Update 2026-11-05: unstable symbols in Adventure raise the thresholds for the new
+revisions to **Silver 40, Gold 50**. See [Recalibration with unstable
+symbols](#recalibration-with-unstable-symbols--2026-11-05). The 2026-11-03 thresholds
+below still apply to wins from earlier revisions.*
+
 Selected initial thresholds: **Bronze for a win, Silver at 30 material left,
 Gold at 45**. Material is board tiles plus reserves after the complete winning
 cascade. A stalled or unfinished run cannot earn a medal. The same thresholds
@@ -71,3 +76,60 @@ achievable material ranges, not that medals isolate skill from luck. Seed 42 als
 has lower medal rates than the seed sweep. Human playtesting should evaluate
 whether Silver feels reachable and Gold rewards deliberate planning. No changes
 to the 3,500 target, reserves, stirring, leaderboard ranking, or RNG were made.
+
+## Recalibration with unstable symbols — 2026-11-05
+
+The new revisions (`adventure-first-v3`, `adventure-3-v2`, `adventure-5-v2`,
+`adventure-8-v2`) add unstable symbols. The efficient policy now ranks a move by
+first-reaction points per tile of material it spends, counting detonations and newly
+formed symbols (a new symbol keeps its tile). With unstable symbols off, that ranking
+is identical to the original: `--before` reproduces
+[medal_calibration.json](medal_calibration.json) exactly. Same seeds, choice RNGs,
+and 960-run schedule. Raw results are in
+[medal_calibration_unstable.json](medal_calibration_unstable.json).
+
+```sh
+uv run python tools/measure_adventure.py --runs 60            # current revisions
+uv run python tools/measure_adventure.py --runs 60 --seed 42
+uv run python tools/measure_adventure.py --runs 60 --before   # released revisions
+```
+
+Before → after, 60 attempts per row:
+
+| Starting seeds | Mode | Policy | Wins | Median material on wins | 30+ | 45+ |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| 0–59 | Unlimited | Random | 60 → 60 | 32 → 31.5 | 33 → 33 | 11 → 11 |
+| 0–59 | Unlimited | Efficient | 59 → 60 | 28 → 44 | 27 → 52 | 7 → 28 |
+| 0–59 | Hard | Random | 41 → 47 | 37 → 36 | 31 → 31 | 11 → 11 |
+| 0–59 | Hard | Efficient | 42 → 58 | 32.5 → 44 | 26 → 52 | 7 → 28 |
+| 42 | Unlimited | Random | 60 → 60 | 20 → 24 | 14 → 16 | 3 → 4 |
+| 42 | Unlimited | Efficient | 60 → 60 | 22.5 → 37.5 | 16 → 48 | 5 → 11 |
+| 42 | Medium | Efficient | 46 → 58 | 26 → 38 | 16 → 48 | 5 → 11 |
+| 42 | Hard | Random | 26 → 32 | 31 → 29.5 | 14 → 16 | 3 → 4 |
+| 42 | Hard | Efficient | 23 → 50 | 32 → 38 | 13 → 45 | 5 → 10 |
+
+Easy and Medium track Unlimited closely in the seed sweep; all rows are in the JSON.
+
+Two findings:
+
+- **Skill now separates from luck.** The original efficient policy did not
+  consistently beat random play. With unstable symbols it clearly does: on the
+  default kit, three times as many 30+ wins and nearly three times as many 45+ wins.
+  Random play barely changes, because it does not exploit the mechanic.
+- **The old thresholds became easy.** On the default kit the efficient policy's
+  median win (37.5) exceeded Silver at 30, and it reached Silver in 48 of 60 runs.
+
+Material reached on the default kit (seed 42), unlimited Adventure, among 60 runs:
+
+| Policy | 35+ | 40+ | 45+ | 50+ |
+| --- | ---: | ---: | ---: | ---: |
+| Random | 11 | 8 | 4 | 2 |
+| Efficient | 42 | 25 | 11 | 6 |
+
+**Decision:** Silver 40, Gold 50 for the new revisions. That restores the original
+intent: Silver sits just above the efficient median win (25 of 60), and Gold is a
+stretch goal (6 of 60 efficient, 2 random). Thresholds are now stored per experiment
+revision (`Experiment.medals`), so wins from earlier revisions keep Silver 30 and
+Gold 45 and never change award. As before, one-move lookahead understates a planning
+human, and human playtesting should confirm the targets.
+
