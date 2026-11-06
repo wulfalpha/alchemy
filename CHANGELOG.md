@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.10
 
 ### Classic
 - **Unused unstable symbols pay out at the end.** Symbols still on the board when the
