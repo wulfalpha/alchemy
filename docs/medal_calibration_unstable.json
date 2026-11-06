@@ -1,0 +1,365 @@
+{
+  "seeds_0_to_59": [
+    {
+      "mode": "adventure",
+      "experiment": "adventure-first-v3",
+      "policy": "random",
+      "runs": 60,
+      "fixed_seed": null,
+      "outcomes": {
+        "success": 60
+      },
+      "material_min": 8,
+      "material_median": 31.5,
+      "material_p75": 41,
+      "material_max": 97,
+      "winners_at_least": {
+        "25": 43,
+        "30": 33,
+        "35": 26,
+        "40": 19,
+        "45": 11,
+        "50": 7
+      }
+    },
+    {
+      "mode": "adventure",
+      "experiment": "adventure-first-v3",
+      "policy": "efficient",
+      "runs": 60,
+      "fixed_seed": null,
+      "outcomes": {
+        "success": 60
+      },
+      "material_min": 16,
+      "material_median": 44.0,
+      "material_p75": 51,
+      "material_max": 87,
+      "winners_at_least": {
+        "25": 57,
+        "30": 52,
+        "35": 48,
+        "40": 37,
+        "45": 28,
+        "50": 19
+      }
+    },
+    {
+      "mode": "adventure-3",
+      "experiment": "adventure-3-v2",
+      "policy": "random",
+      "runs": 60,
+      "fixed_seed": null,
+      "outcomes": {
+        "success": 47,
+        "stirs_exhausted": 13
+      },
+      "material_min": 20,
+      "material_median": 36,
+      "material_p75": 44,
+      "material_max": 97,
+      "winners_at_least": {
+        "25": 38,
+        "30": 31,
+        "35": 26,
+        "40": 19,
+        "45": 11,
+        "50": 7
+      }
+    },
+    {
+      "mode": "adventure-3",
+      "experiment": "adventure-3-v2",
+      "policy": "efficient",
+      "runs": 60,
+      "fixed_seed": null,
+      "outcomes": {
+        "success": 58,
+        "stirs_exhausted": 2
+      },
+      "material_min": 24,
+      "material_median": 44.0,
+      "material_p75": 51,
+      "material_max": 87,
+      "winners_at_least": {
+        "25": 57,
+        "30": 52,
+        "35": 48,
+        "40": 37,
+        "45": 28,
+        "50": 19
+      }
+    },
+    {
+      "mode": "adventure-5",
+      "experiment": "adventure-5-v2",
+      "policy": "random",
+      "runs": 60,
+      "fixed_seed": null,
+      "outcomes": {
+        "success": 58,
+        "stirs_exhausted": 2
+      },
+      "material_min": 14,
+      "material_median": 32.0,
+      "material_p75": 41,
+      "material_max": 97,
+      "winners_at_least": {
+        "25": 43,
+        "30": 33,
+        "35": 26,
+        "40": 19,
+        "45": 11,
+        "50": 7
+      }
+    },
+    {
+      "mode": "adventure-5",
+      "experiment": "adventure-5-v2",
+      "policy": "efficient",
+      "runs": 60,
+      "fixed_seed": null,
+      "outcomes": {
+        "success": 60
+      },
+      "material_min": 16,
+      "material_median": 44.0,
+      "material_p75": 51,
+      "material_max": 87,
+      "winners_at_least": {
+        "25": 57,
+        "30": 52,
+        "35": 48,
+        "40": 37,
+        "45": 28,
+        "50": 19
+      }
+    },
+    {
+      "mode": "adventure-8",
+      "experiment": "adventure-8-v2",
+      "policy": "random",
+      "runs": 60,
+      "fixed_seed": null,
+      "outcomes": {
+        "success": 60
+      },
+      "material_min": 8,
+      "material_median": 31.5,
+      "material_p75": 41,
+      "material_max": 97,
+      "winners_at_least": {
+        "25": 43,
+        "30": 33,
+        "35": 26,
+        "40": 19,
+        "45": 11,
+        "50": 7
+      }
+    },
+    {
+      "mode": "adventure-8",
+      "experiment": "adventure-8-v2",
+      "policy": "efficient",
+      "runs": 60,
+      "fixed_seed": null,
+      "outcomes": {
+        "success": 60
+      },
+      "material_min": 16,
+      "material_median": 44.0,
+      "material_p75": 51,
+      "material_max": 87,
+      "winners_at_least": {
+        "25": 57,
+        "30": 52,
+        "35": 48,
+        "40": 37,
+        "45": 28,
+        "50": 19
+      }
+    }
+  ],
+  "seed_42": [
+    {
+      "mode": "adventure",
+      "experiment": "adventure-first-v3",
+      "policy": "random",
+      "runs": 60,
+      "fixed_seed": 42,
+      "outcomes": {
+        "success": 60
+      },
+      "material_min": 8,
+      "material_median": 24.0,
+      "material_p75": 30,
+      "material_max": 60,
+      "winners_at_least": {
+        "25": 29,
+        "30": 16,
+        "35": 11,
+        "40": 8,
+        "45": 4,
+        "50": 2
+      }
+    },
+    {
+      "mode": "adventure",
+      "experiment": "adventure-first-v3",
+      "policy": "efficient",
+      "runs": 60,
+      "fixed_seed": 42,
+      "outcomes": {
+        "success": 60
+      },
+      "material_min": 16,
+      "material_median": 37.5,
+      "material_p75": 41,
+      "material_max": 68,
+      "winners_at_least": {
+        "25": 55,
+        "30": 48,
+        "35": 42,
+        "40": 25,
+        "45": 11,
+        "50": 6
+      }
+    },
+    {
+      "mode": "adventure-3",
+      "experiment": "adventure-3-v2",
+      "policy": "random",
+      "runs": 60,
+      "fixed_seed": 42,
+      "outcomes": {
+        "stirs_exhausted": 28,
+        "success": 32
+      },
+      "material_min": 18,
+      "material_median": 29.5,
+      "material_p75": 36,
+      "material_max": 60,
+      "winners_at_least": {
+        "25": 24,
+        "30": 16,
+        "35": 11,
+        "40": 8,
+        "45": 4,
+        "50": 2
+      }
+    },
+    {
+      "mode": "adventure-3",
+      "experiment": "adventure-3-v2",
+      "policy": "efficient",
+      "runs": 60,
+      "fixed_seed": 42,
+      "outcomes": {
+        "success": 50,
+        "stirs_exhausted": 10
+      },
+      "material_min": 26,
+      "material_median": 38.0,
+      "material_p75": 41,
+      "material_max": 68,
+      "winners_at_least": {
+        "25": 50,
+        "30": 45,
+        "35": 40,
+        "40": 24,
+        "45": 10,
+        "50": 6
+      }
+    },
+    {
+      "mode": "adventure-5",
+      "experiment": "adventure-5-v2",
+      "policy": "random",
+      "runs": 60,
+      "fixed_seed": 42,
+      "outcomes": {
+        "success": 54,
+        "stirs_exhausted": 6
+      },
+      "material_min": 12,
+      "material_median": 26.0,
+      "material_p75": 30,
+      "material_max": 60,
+      "winners_at_least": {
+        "25": 29,
+        "30": 16,
+        "35": 11,
+        "40": 8,
+        "45": 4,
+        "50": 2
+      }
+    },
+    {
+      "mode": "adventure-5",
+      "experiment": "adventure-5-v2",
+      "policy": "efficient",
+      "runs": 60,
+      "fixed_seed": 42,
+      "outcomes": {
+        "success": 58,
+        "stirs_exhausted": 2
+      },
+      "material_min": 16,
+      "material_median": 38.0,
+      "material_p75": 41,
+      "material_max": 68,
+      "winners_at_least": {
+        "25": 55,
+        "30": 48,
+        "35": 42,
+        "40": 25,
+        "45": 11,
+        "50": 6
+      }
+    },
+    {
+      "mode": "adventure-8",
+      "experiment": "adventure-8-v2",
+      "policy": "random",
+      "runs": 60,
+      "fixed_seed": 42,
+      "outcomes": {
+        "success": 60
+      },
+      "material_min": 8,
+      "material_median": 24.0,
+      "material_p75": 30,
+      "material_max": 60,
+      "winners_at_least": {
+        "25": 29,
+        "30": 16,
+        "35": 11,
+        "40": 8,
+        "45": 4,
+        "50": 2
+      }
+    },
+    {
+      "mode": "adventure-8",
+      "experiment": "adventure-8-v2",
+      "policy": "efficient",
+      "runs": 60,
+      "fixed_seed": 42,
+      "outcomes": {
+        "success": 60
+      },
+      "material_min": 16,
+      "material_median": 37.5,
+      "material_p75": 41,
+      "material_max": 68,
+      "winners_at_least": {
+        "25": 55,
+        "30": 48,
+        "35": 42,
+        "40": 25,
+        "45": 11,
+        "50": 6
+      }
+    }
+  ]
+}

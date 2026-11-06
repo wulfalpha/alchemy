@@ -296,8 +296,8 @@ def test_mode_key_cycles_and_starts_a_new_game():
     st = drive(script)
     keys = [g.experiment.key if isinstance(g, AdventureGame) else g.mode.key
             for g in st['games']]
-    assert keys == ['classic-30', 'diagonal-30', 'adventure-first-v2',
-                    'adventure-3-v1', 'adventure-5-v1', 'adventure-8-v1', 'classic-30']
+    assert keys == ['classic-30', 'diagonal-30', 'adventure-first-v3',
+                    'adventure-3-v2', 'adventure-5-v2', 'adventure-8-v2', 'classic-30']
 
 
 def test_completed_game_saved_once_after_last_cascade(tmp_path):
@@ -385,13 +385,14 @@ def test_adventure_completion_records_only_success_with_effective_seed(tmp_path,
 
     drive(script, argv=('--mode', ADVENTURE.key, '--scores-dir', str(tmp_path)))
     scores = Scoreboard(tmp_path)
-    from alchemy.adventure import FIRST_EXPERIMENT
-    rows = scores.top(42, mode=FIRST_EXPERIMENT.key)
+    from alchemy.adventure import EXPERIMENTS
+    key = EXPERIMENTS[ADVENTURE.key].key
+    rows = scores.top(42, mode=key)
     assert len(rows) == int(succeed)
     if succeed:
         assert rows[0]['material_left'] == 0
         assert rows[0]['swaps'] == rows[0]['stirs'] == 0
-    assert scores.top(None, mode=FIRST_EXPERIMENT.key) == []
+    assert scores.top(None, mode=key) == []
     scores.close()
 
 
@@ -550,7 +551,7 @@ def test_limited_adventure_launch_and_restart_keep_experiment(limit):
     def script(frame, st):
         game = st['games'][-1]
         assert game.experiment.stir_limit == limit
-        assert game.experiment.key == f'adventure-{limit}-v1'
+        assert game.experiment.key == f'adventure-{limit}-v2'
         if frame == 1:
             game.stirs = limit
             return [pygame.event.Event(pygame.KEYDOWN, key=pygame.K_r)]

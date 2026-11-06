@@ -164,5 +164,5 @@ def test_limited_adventure_scores_are_isolated(tmp_path, limit):
                      material_left=20, swaps=25, stirs=2)
     key = EXPERIMENTS[f'adventure-{limit}'].key
     assert [row['player'] for row in board.top(42, mode=key)] == [f'adventure-{limit}']
-    assert [category.mode for category in score_categories(key, 'Adventure')] == [key]
+    assert [category.mode for category in score_categories(key, 'Adventure')] == [key, f'adventure-{limit}-v1']
     board.close()

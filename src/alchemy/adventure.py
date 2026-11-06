@@ -4,7 +4,7 @@ from dataclasses import dataclass, replace
 
 from .board import Game, SIZE, matches, legal_moves
 from .modes import ADVENTURE
-from .medals import efficiency_medal
+from .medals import efficiency_medal, V1_THRESHOLDS, UNSTABLE_THRESHOLDS
 
 
 @dataclass(frozen=True)
@@ -16,15 +16,34 @@ class Experiment:
     seed: int = 42
     stir_attempts: int = 200
     stir_limit: int | None = None
+    unstable: bool = False   # skilful matches leave unstable symbols (see board.py)
+    medals: tuple = V1_THRESHOLDS   # (silver, gold) material left; see medals.py
 
 
+# Released definitions stay unchanged so their saved scores keep their meaning.
 FIRST_EXPERIMENT = Experiment()
-EXPERIMENTS = {
+PREVIOUS_EXPERIMENTS = {
     'adventure': FIRST_EXPERIMENT,
     'adventure-3': replace(FIRST_EXPERIMENT, key='adventure-3-v1', stir_limit=3),
     'adventure-5': replace(FIRST_EXPERIMENT, key='adventure-5-v1', stir_limit=5),
     'adventure-8': replace(FIRST_EXPERIMENT, key='adventure-8-v1', stir_limit=8),
 }
+# Current revisions: the same kits and stir limits, with unstable symbols. They make
+# efficient play much stronger, so medal thresholds rise (docs/medal_calibration.md).
+_UNSTABLE = dict(unstable=True, medals=UNSTABLE_THRESHOLDS)
+EXPERIMENTS = {
+    'adventure': replace(FIRST_EXPERIMENT, key='adventure-first-v3', **_UNSTABLE),
+    'adventure-3': replace(PREVIOUS_EXPERIMENTS['adventure-3'], key='adventure-3-v2', **_UNSTABLE),
+    'adventure-5': replace(PREVIOUS_EXPERIMENTS['adventure-5'], key='adventure-5-v2', **_UNSTABLE),
+    'adventure-8': replace(PREVIOUS_EXPERIMENTS['adventure-8'], key='adventure-8-v2', **_UNSTABLE),
+}
+_BY_KEY = {e.key: e for e in (*PREVIOUS_EXPERIMENTS.values(), *EXPERIMENTS.values())}
+
+
+def medal_thresholds(experiment_key):
+    """(silver, gold) for a saved experiment revision; unknown and older keys use v1."""
+    experiment = _BY_KEY.get(experiment_key)
+    return experiment.medals if experiment else V1_THRESHOLDS
 
 
 def finite_refill(grid, cleared, reserves, rng):
@@ -47,6 +66,24 @@ def finite_refill(grid, cleared, reserves, rng):
         column = [None]*(SIZE-len(survivors)-len(replacements)) + replacements + survivors
         for y, value in enumerate(column):
             grid[y][x] = value
+
+
+def carry_markers(markers, grid, rng):
+    """Re-attach unstable markers after a stir.
+
+    `markers` lists (element, tier) pairs taken before the stir. A stir keeps every
+    tile, so each marker moves to a randomly chosen unmarked tile of its element.
+    """
+    cells = {}
+    for y, row in enumerate(grid):
+        for x, value in enumerate(row):
+            if value is not None:
+                cells.setdefault(value, []).append((x, y))
+    carried = {}
+    for element, tier in markers:
+        cell = rng.choice([c for c in cells[element] if c not in carried])
+        carried[cell] = tier
+    return carried
 
 
 def sparse_layout(tiles, mode=ADVENTURE):
@@ -132,7 +169,7 @@ class AdventureGame(Game):
     def __init__(self, seed=None, experiment=FIRST_EXPERIMENT):
         self.experiment = experiment
         self.seed = experiment.seed if seed is None else seed
-        super().__init__(self.seed, ADVENTURE)
+        super().__init__(self.seed, replace(ADVENTURE, unstable=experiment.unstable))
         self.reserves = list(experiment.reserves)
         self.outcome = None
         self.failure_reason = None
@@ -148,7 +185,8 @@ class AdventureGame(Game):
 
     @property
     def medal(self):
-        return efficiency_medal(self.material_left) if self.outcome == 'success' else None
+        return (efficiency_medal(self.material_left, self.experiment.medals)
+                if self.outcome == 'success' else None)
 
     @property
     def points_remaining(self):
@@ -188,6 +226,7 @@ class AdventureGame(Game):
             self.outcome = 'success'
             self.message = 'Experiment complete: target reached!'
         elif not legal_moves(self.grid, self.mode):
+            markers = [(self.grid[y][x], tier) for (x, y), tier in sorted(self.unstable.items())]
             counts = Counter(v for row in self.grid for v in row if v is not None)
             if max(counts.values(), default=0) < 4:
                 self.outcome = 'stalled'
@@ -196,7 +235,7 @@ class AdventureGame(Game):
                 self.outcome = 'stalled'
                 self.failure_reason = 'stirs_exhausted'
             elif stir(self.grid, self.rng, self.mode, self.experiment.stir_attempts):
-                self.unstable = {}   # a stir rearranges tiles; markers would not follow them
+                self.unstable = carry_markers(markers, self.grid, self.rng)
                 self.stirs += 1
                 self.message = 'Vessel stirred: the same material, rearranged.'
                 events.append('shuffle')

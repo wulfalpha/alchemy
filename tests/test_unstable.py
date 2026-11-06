@@ -1,4 +1,8 @@
 """Unstable symbols: earned by 5-runs and shapes, detonated by a later match."""
+from dataclasses import replace
+
+import pytest
+
 from alchemy.adventure import AdventureGame
 from alchemy.board import (ELEMENT, LINE, SIZE, SQUARE, UNSTABLE_POINTS, Game, blast_cells, detonate,
                            fall_positions, matched_runs, shape_crossings, unstable_births)
@@ -192,7 +196,7 @@ def test_a_fresh_board_has_no_unstable_symbols(monkeypatch):
     assert f'1 unstable symbol banked (+{UNUSED_BONUS[ELEMENT]})' in game.message
 
 
-def test_diagonal_and_adventure_never_form_unstable_symbols():
+def test_diagonal_and_released_adventure_never_form_unstable_symbols():
     for game in (Game(3, DIAGONALS), AdventureGame()):
         game.grid = quiet()
         game.grid[3][:5] = [0, 0, 1, 0, 0]
@@ -250,3 +254,102 @@ def test_the_bonus_stays_below_a_typical_detonation():
     # A Line clears its row: at least 4 extra tiles beyond a matched four.
     assert UNUSED_BONUS[LINE] < 4 * UNSTABLE_POINTS
     assert UNUSED_BONUS[LINE] < UNUSED_BONUS[SQUARE] < UNUSED_BONUS[ELEMENT]
+
+
+# ---------- Adventure ----------
+
+def current_adventure(name='adventure'):
+    from alchemy.adventure import EXPERIMENTS
+    return AdventureGame(experiment=EXPERIMENTS[name])
+
+
+def test_current_adventure_revisions_have_unstable_symbols_and_released_ones_do_not():
+    from alchemy.adventure import EXPERIMENTS, PREVIOUS_EXPERIMENTS
+    for name, experiment in EXPERIMENTS.items():
+        previous = PREVIOUS_EXPERIMENTS[name]
+        assert experiment.unstable and not previous.unstable
+        assert experiment.key != previous.key
+        assert experiment.medals == (40, 50) and previous.medals == (30, 45)
+        assert replace(experiment, key=previous.key, unstable=False, medals=previous.medals) == previous
+        assert AdventureGame(experiment=experiment).mode.unstable
+        assert not AdventureGame(experiment=previous).mode.unstable
+
+
+def test_adventure_forms_symbols_and_they_are_not_consumed_as_material():
+    game = current_adventure()
+    game.grid = quiet()
+    game.grid[3][:5] = [0, 0, 1, 0, 0]
+    game.grid[4][2] = 0
+    game._settle = lambda events: None
+    before = game.material_left
+    assert game.attempt((2, 3), (2, 4))
+    assert 'unstable' in game.resolve()
+    assert game.unstable == {(2, 3): LINE}
+    assert game.consumed == 4                       # the new symbol's tile stays in play
+    assert game.material_left + game.consumed == game.initial_material == before
+
+
+def test_adventure_detonations_consume_material_and_score_the_blast():
+    game = current_adventure()
+    game.grid = quiet()
+    game.grid[3][:4] = [0, 0, 0, 1]
+    game.grid[4][3] = 0
+    game.unstable = {(0, 3): LINE}
+    game._settle = lambda events: None
+    assert game.attempt((3, 3), (3, 4))
+    game.resolve()
+    assert game.consumed == SIZE                    # the whole row
+    assert game.last_reaction['unstable'] == 4 * UNSTABLE_POINTS
+    assert game.material_left + game.consumed == game.initial_material
+
+
+def test_a_stir_carries_unstable_markers_to_tiles_of_the_same_element():
+    game = current_adventure()
+    blocked = [[(x + 2*y) % 4 for x in range(SIZE)] for y in range(SIZE)]
+    game.grid = [row[:] for row in blocked]
+    game.unstable = {(0, 0): LINE, (1, 0): SQUARE, (2, 0): ELEMENT}
+    elements = sorted((blocked[y][x], tier) for (x, y), tier in game.unstable.items())
+    events = []
+    game._settle(events)
+    assert events == ['shuffle'] and game.stirs == 1
+    assert sorted((game.grid[y][x], tier) for (x, y), tier in game.unstable.items()) == elements
+
+
+def test_adventure_never_banks_or_pays_an_unused_bonus():
+    game = current_adventure()
+    game.unstable = {(0, 7): ELEMENT}
+    game.score = game.experiment.target
+    game._settle([])
+    assert game.outcome == 'success'
+    assert game.unused_bonus is None and not game.banked
+    assert game.score == game.experiment.target
+
+
+def test_current_adventure_scores_keep_earlier_revisions_one_tab_away():
+    from alchemy.adventure import EXPERIMENTS, PREVIOUS_EXPERIMENTS
+    first = score_categories(EXPERIMENTS['adventure'].key, 'Adventure')
+    assert [c.mode for c in first] == ['adventure-first-v3', 'adventure-first-v2', 'adventure-first-v1']
+    assert first[1].label == 'Adventure / before unstable symbols'
+    for name in ('adventure-3', 'adventure-5', 'adventure-8'):
+        categories = score_categories(EXPERIMENTS[name].key, 'Adventure / Hard')
+        assert [c.mode for c in categories] == [EXPERIMENTS[name].key, PREVIOUS_EXPERIMENTS[name].key]
+
+
+@pytest.mark.parametrize('outcome, count, shown', [
+    ('success', 2, '2 unstable symbols left unspent'),
+    ('success', 1, '1 unstable symbol left unspent'),
+    ('success', 0, None),
+    ('stalled', 2, None),
+])
+def test_win_screen_reports_unspent_unstable_symbols(outcome, count, shown):
+    from unittest.mock import Mock
+    from alchemy.render import AdventureView
+    game = current_adventure()
+    game.outcome = outcome
+    game.failure_reason = None if outcome == 'success' else 'insufficient_material'
+    game.unstable = dict(list({(0, 0): LINE, (1, 1): SQUARE}.items())[:count])
+    canvas = Mock()
+    AdventureView().end_details(canvas, game)
+    lines = [call.args[0] for call in canvas.text.call_args_list]
+    unspent = [line for line in lines if 'unspent' in line]
+    assert unspent == ([] if shown is None else [shown + ' (counted in material left)'])

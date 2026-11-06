@@ -98,8 +98,9 @@ attempts do not enter the leaderboard. New results include material left, swaps,
 and stirs. Because every win clears the same target, Adventure ranks by
 efficiency rather than points: most material left, then fewest swaps, with points
 breaking any remaining tie. Earlier wins saved without these statistics rank after
-those with them. The improved stir uses experiment revision `adventure-first-v2`; **Tab**
-in Adventure scores shows the original revision separately, with unavailable
+those with them. The current revision, with unstable symbols, is `adventure-first-v3`. **Tab** in
+Adventure scores shows earlier revisions separately: `adventure-first-v2` (before
+unstable symbols) and the original `adventure-first-v1`, with unavailable
 efficiency statistics clearly labeled. The earlier launch name
 `--mode adventure-first-v1` still works. The initial target is for playtesting;
 campaign progression and reactant recovery are future work.
@@ -120,11 +121,26 @@ matching material, or need another stir with none left. The full cascade finishe
 before the result is checked, and reaching the target takes priority. Failed layout
 searches still end the experiment without consuming a successful stir.
 
-Each variant has separate efficiency-ranked scores (`adventure-3-v1`,
-`adventure-5-v1`, and `adventure-8-v1`). **R** retries the same variant with its full stir allowance.
+Each variant has separate efficiency-ranked scores (`adventure-3-v2`,
+`adventure-5-v2`, and `adventure-8-v2`, with unstable symbols). Scores from before
+unstable symbols (`-v1`) are one **Tab** away. **R** retries the same variant with its full stir allowance.
 These difficulty names were selected after initial playtesting. The existing
 launch names and score partitions are unchanged.
-The original `adventure` mode keeps unlimited free stirs and its existing scores.
+The original `adventure` mode keeps unlimited free stirs.
+
+### Unstable symbols in Adventure
+
+Adventure uses the same [unstable symbols](#unstable-symbols-classic) as Classic, with
+two differences that follow from finite material:
+
+- **A stir keeps them.** Stirring rearranges the same material, so each unstable symbol
+  moves with the vessel and lands on a tile of its own element. Nothing is banked, and
+  there is no end-of-game bonus: a symbol you never use is still a tile, and already
+  counts as material left. The win screen notes how many were left unspent.
+- **Blasts spend material.** Every tile a detonation clears is consumed like any other.
+  Each pays 50 points, more than the roughly 35 points per tile a Gold run can afford, so a
+  well-timed detonation helps your medal, while a careless one wastes reactants. A newly
+  formed unstable symbol keeps its tile, so forming one costs no material.
 
 ### Adventure efficiency medals
 
@@ -133,18 +149,20 @@ entire final cascade** (board tiles plus reserves):
 
 | Medal | Material left on a successful run |
 | --- | --- |
-| Bronze | 0–29 |
-| Silver | 30–44 |
-| Gold | 45 or more |
+| Bronze | 0–39 |
+| Silver | 40–49 |
+| Gold | 50 or more |
 
-These thresholds apply to Easy, Medium, Hard, and unlimited Adventure. Stirs and
+These thresholds apply to Easy, Medium, Hard, and unlimited Adventure. They were
+raised with unstable symbols, which make efficient play much stronger; wins from
+earlier revisions keep their original thresholds (Silver 30, Gold 45) and medals. Stirs and
 swaps do not change the medal; each difficulty keeps its separate ranking.
 The material counter shows the Silver and Gold goals, and wins show their medal
 on the completion screen and local scoreboard. Stalled or unfinished runs earn
 no medal. Existing saved wins with material statistics also display medals; older
 wins without those statistics remain ungraded. Ranking and saved score values
-are unchanged. These initial thresholds are informed by automated runs and remain
-subject to human playtesting; see [the calibration notes](docs/medal_calibration.md).
+are unchanged. The thresholds are informed by automated runs and remain subject to human
+playtesting; see [the calibration notes](docs/medal_calibration.md).
 
 Classic scores from earlier scoring rules stay in their own categories on the scoreboard:
 **Classic / without unused-symbol bonus** (0.1.9, rules `unstable-v1`) and **Classic / before
@@ -295,7 +313,7 @@ than long lines, so they earn the Element.
   everything it will take, blasts included.
 - An unstable symbol caught in another blast also detonates. A Line set off that way
   clears both its row and column.
-- When a dead board is replaced, the unstable symbols on it are lost to play but
+- When a dead board is replaced in Classic, the unstable symbols on it are lost to play but
   **banked**. The message line announces it, and the bank's value appears in gold
   under the moves counter.
 - When the game ends, every unstable symbol you never detonated pays a flat bonus,
@@ -304,7 +322,8 @@ than long lines, so they earn the Element.
   A detonation is usually worth more, so using a symbol beats saving it.
 
 Each detonation type has its own sound (`line_burst`, `square_burst`,
-`element_burst`), as does forming a new unstable symbol (`unstable`). Unstable symbols
-are Classic-only for now; Diagonal and Adventure are unchanged. Classic scores are saved under the scoring rules `unstable-v2`.
+`element_burst`), as does forming a new unstable symbol (`unstable`). Adventure
+also has unstable symbols (see [Unstable symbols in Adventure](#unstable-symbols-in-adventure));
+Diagonal does not. Classic scores are saved under the scoring rules `unstable-v2`.
 Scores from 0.1.9, before the unused-symbol bonus, stay in their own
 **Classic / without unused-symbol bonus** category, one **Tab** press away.

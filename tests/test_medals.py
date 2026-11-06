@@ -63,3 +63,42 @@ def test_rendered_legacy_score_does_not_invent_a_medal():
     shown = ' '.join(str(call.args[0]) for call in canvas.text.call_args_list)
     assert 'Efficiency stats unavailable' in shown
     assert not any(medal in shown for medal in ('Bronze', 'Silver', 'Gold'))
+
+
+@pytest.mark.parametrize('material, medal', [
+    (39, 'Bronze'), (40, 'Silver'), (49, 'Silver'), (50, 'Gold'),
+])
+def test_unstable_revisions_use_raised_thresholds(material, medal):
+    for experiment in EXPERIMENTS.values():
+        game = AdventureGame(experiment=experiment)
+        game.outcome = 'success'
+        game.reserves = [0, 0, 0, 0]
+        cells = [(x, y) for y in range(8) for x in range(8)]
+        for x, y in cells[material:]:
+            game.grid[y][x] = None
+        assert game.material_left == material
+        assert game.medal == medal
+
+
+def test_released_revisions_keep_their_original_thresholds():
+    from alchemy.adventure import PREVIOUS_EXPERIMENTS, medal_thresholds
+    for experiment in PREVIOUS_EXPERIMENTS.values():
+        assert medal_thresholds(experiment.key) == (30, 45)
+    assert medal_thresholds('adventure-first-v1') == (30, 45)
+    assert medal_thresholds(EXPERIMENTS['adventure'].key) == (40, 50)
+
+
+@pytest.mark.parametrize('released, medal', [(True, 'Silver'), (False, 'Bronze')])
+def test_scoreboard_grades_each_category_by_its_own_revision(released, medal):
+    from alchemy.adventure import PREVIOUS_EXPERIMENTS
+    from alchemy.scores import ScoreCategory
+    key = (PREVIOUS_EXPERIMENTS if released else EXPERIMENTS)['adventure-5'].key
+    canvas = Mock()
+    AdventureView().score_detail(canvas, dict(material_left=35, swaps=20, stirs=1), 282,
+                                 ScoreCategory('Adventure', key, 'shapes-v3'))
+    assert f'35 / {medal}' in [call.args[0] for call in canvas.text.call_args_list]
+
+
+def test_material_counter_shows_the_current_revisions_goals():
+    note = AdventureView().counter(AdventureGame(experiment=EXPERIMENTS['adventure']))[2]
+    assert note == 'Silver 40+ / Gold 50+'
