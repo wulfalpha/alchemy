@@ -753,3 +753,31 @@ and made the old thresholds easy (Silver for 48 of 60 efficient default-kit runs
 player chose to raise the new revisions to **Silver 40, Gold 50**. Thresholds are now
 per revision (`Experiment.medals`), so earlier wins keep their 30/45 awards.
 
+## Authored kits and campaign: proposed design (2026-11-05)
+
+Agreed in discussion; step 1 is next. Each kit introduces one idea and is named for
+a stage of the magnum opus. Medals keep measuring material left in every kit.
+
+| Stage | Kit | Rule | Teaches | New engine work |
+| --- | --- | --- | --- | --- |
+| Nigredo | *The Dry Flask* | Scarce water reserves (*initial*: 6 instead of 20); points target | Spend the scarce element carefully | None: reserves only |
+| Albedo | *Purification* | Win by removing every earth tile from board and reserves (*initial*: 12 earth in reserve) | Objectives other than points; an earth Element blast is the key play | "Purify" objective |
+| Citrinitas | *The Golden Shape* | Win by forming and detonating an Element symbol before material runs out | Earning and spending unstable symbols | "Detonate" objective |
+| Rubedo | *The Red Plate* | Fixed board, no reserves, two pre-placed unstable symbols; clear all fire within 6 swaps | Multi-move planning | Fixed boards, swap limit, solvability search |
+
+Decisions (player, 2026-11-05):
+
+- **Unlock in order.** Winning a kit opens the next; progress is stored locally in the
+  scoreboard database's `settings` table. The first kit is always open.
+- **One fixed design per kit.** No Easy/Medium/Hard tiers: each kit carries its own stir
+  limit and medal thresholds, tuned as a single puzzle. One scoreboard per kit.
+- **Build order:** (1) kit picker and progression plus *The Dry Flask*; (2) objective
+  system plus *Purification* and *The Golden Shape*; (3) fixed boards plus *The Red
+  Plate*, with a search proving every shipped plate solvable.
+
+Kit picker (*initial*): a campaign entry in the mode cycle; inside it, **E** cycles the
+unlocked kits, and the sidebar shows the kit's name, objective, and progress. A fuller
+"laboratory notebook" screen can follow once there are more kits. Every kit's numbers
+should be calibrated with `tools/measure_adventure.py` before release, as the medal
+thresholds were.
+
