@@ -6,6 +6,7 @@ Everything a mode draws differently lives in a view (`ClassicView`,
 import io
 from importlib.resources import files
 import logging
+import math
 
 import pygame
 from .board import SIZE
@@ -21,6 +22,7 @@ TEXT = (241, 229, 203)
 MUTED = (156, 173, 174)
 GOLD = (223, 181, 103)
 MEDAL_COLORS = {'Bronze': (205, 154, 111), 'Silver': (195, 209, 220), 'Gold': GOLD}
+UNSTABLE = (255, 196, 110)
 SURFACE = (35, 49, 55)
 RULE = (57, 68, 68)
 
@@ -222,6 +224,9 @@ def draw_board(canvas, session):
                 symbol = symbol.copy()
                 symbol.set_alpha(max(0, int(255 * (1-(now-session.clear_started)/350))))
             screen.blit(symbol, symbol.get_rect(center=rect.center))
+            tier = game.unstable.get((x, y))
+            if tier:
+                draw_unstable(screen, rect, tier, now, session.reduced_motion)
             if session.selected == (x, y) or (session.hint and (x, y) in session.hint):
                 pygame.draw.rect(screen, GOLD, rect.inflate(4, 4), 3, border_radius=12)
             if pending:
@@ -231,6 +236,24 @@ def draw_board(canvas, session):
         cell = pygame.Rect(LEFT+x*TILE+3, TOP+y*TILE+3, TILE-6, TILE-6)
         pygame.draw.rect(screen, TEXT, cell.inflate(10, 10), 2, border_radius=14)
     screen.set_clip(None)
+
+
+def draw_unstable(screen, rect, tier, now, reduced_motion):
+    """Mark an unstable symbol: stripes (Line), corner brackets (Square), or a ring (Element)."""
+    glow = 1 if reduced_motion else 0.8 + 0.2 * math.sin(now / 160)
+    color = tuple(int(c * glow) for c in UNSTABLE)
+    if tier == 'line':
+        for y in (rect.top + 6, rect.bottom - 7):
+            pygame.draw.line(screen, color, (rect.left + 12, y), (rect.right - 13, y), 3)
+    elif tier == 'square':
+        inner, arm = rect.inflate(-8, -8), 12
+        for (cx, cy), (dx, dy) in (((inner.left, inner.top), (1, 1)), ((inner.right - 1, inner.top), (-1, 1)),
+                                   ((inner.left, inner.bottom - 1), (1, -1)),
+                                   ((inner.right - 1, inner.bottom - 1), (-1, -1))):
+            pygame.draw.line(screen, color, (cx, cy), (cx + dx*arm, cy), 3)
+            pygame.draw.line(screen, color, (cx, cy), (cx, cy + dy*arm), 3)
+    else:
+        pygame.draw.circle(screen, color, rect.center, rect.width // 2 - 4, 3)
 
 
 def draw_panel(canvas, session, view):
@@ -258,7 +281,10 @@ def draw_panel(canvas, session, view):
     if game.last_reaction:
         reaction = game.last_reaction
         canvas.text(f"Reaction +{reaction['total']}  (x{reaction['multiplier']})", (662, 645), 19, GOLD)
-        canvas.text(f"Base {reaction['base']} / long lines +{reaction['length']}", (662, 672), 14, MUTED)
+        detail = f"Base {reaction['base']} / long lines +{reaction['length']}"
+        if reaction.get('unstable'):
+            detail += f" / unstable +{reaction['unstable']}"
+        canvas.text(detail, (662, 672), 14, MUTED)
         canvas.text(f"L +{reaction['l_shape']} / T +{reaction['t_shape']} / Plus +{reaction['plus']}",
                     (662, 692), 14, GOLD)
     canvas.text(f'Sound: {"off" if session.audio.muted else "on"}  [M]   /   ESC to quit', (662, 739), 14, MUTED)

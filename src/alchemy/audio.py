@@ -15,7 +15,8 @@ from pathlib import Path
 import pygame
 
 EVENTS = ('select', 'swap', 'invalid', 'match', 'cascade', 'plus',
-          'l_shape', 't_shape', 'hint', 'shuffle', 'restart', 'game_over')
+          'l_shape', 't_shape', 'unstable', 'line_burst', 'square_burst', 'element_burst',
+          'hint', 'shuffle', 'restart', 'game_over')
 
 
 def keep_forever(sound):

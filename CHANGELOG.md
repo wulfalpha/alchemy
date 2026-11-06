@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Classic
+- Add **unstable symbols**. Exactly five in a row leaves a **Line** symbol, six or more
+  in a row a **Square**, and an L, T, or plus shape an **Element**. Matching one
+  detonates it: a Line clears its row or column in the direction of that match, a Square
+  the 3×3 block around it, and an Element every symbol of its element on the board.
+  Each extra tile cleared scores 50, times the cascade number, and caught unstable
+  symbols detonate in turn. The board highlights the full blast before it clears.
+- Classic scores now save under the `unstable-v1` rules. Earlier Classic scores stay
+  in a **Classic / before unstable symbols** scoreboard category (press **Tab**).
+- New built-in tones and optional sound files: `unstable`, `line_burst`,
+  `square_burst`, and `element_burst`.
+- Diagonal and Adventure are unchanged.
+
 ## 0.1.8
 
 ### Adventure

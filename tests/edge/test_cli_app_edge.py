@@ -303,7 +303,7 @@ def test_mode_key_cycles_and_starts_a_new_game():
 def test_completed_game_saved_once_after_last_cascade(tmp_path):
     from alchemy.scores import Scoreboard
     from alchemy.board import legal_moves
-    from alchemy.modes import DEFAULT_KEY
+    from alchemy.modes import DEFAULT_KEY, MODES
     queue = []
     def script(frame, st):
         game = st['games'][-1]
@@ -322,9 +322,11 @@ def test_completed_game_saved_once_after_last_cascade(tmp_path):
         return [pygame.event.Event(pygame.QUIT)]
     state = drive(script, argv=('--seed','7','--player','Tester','--scores-dir',str(tmp_path)))
     scores = Scoreboard(tmp_path)
-    assert len(scores.top(7, mode=DEFAULT_KEY)) == 1
-    assert scores.top(7, mode=DEFAULT_KEY)[0]['score'] == state['score']
-    assert scores.top(mode=DEFAULT_KEY) == []  # unseeded ranking is separate
+    rules = MODES[DEFAULT_KEY].rules
+    assert len(scores.top(7, mode=DEFAULT_KEY, rules=rules)) == 1
+    assert scores.top(7, mode=DEFAULT_KEY, rules=rules)[0]['score'] == state['score']
+    assert scores.top(mode=DEFAULT_KEY, rules=rules) == []  # unseeded ranking is separate
+    assert scores.top(7, mode=DEFAULT_KEY) == []  # Classic no longer saves under shapes-v3
     scores.close()
 
 

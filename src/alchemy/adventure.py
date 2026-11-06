@@ -196,6 +196,7 @@ class AdventureGame(Game):
                 self.outcome = 'stalled'
                 self.failure_reason = 'stirs_exhausted'
             elif stir(self.grid, self.rng, self.mode, self.experiment.stir_attempts):
+                self.unstable = {}   # a stir rearranges tiles; markers would not follow them
                 self.stirs += 1
                 self.message = 'Vessel stirred: the same material, rearranged.'
                 events.append('shuffle')

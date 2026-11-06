@@ -3,7 +3,7 @@
 A mode is pure data with no pygame or board dependency, so `board.py` stays a
 rules module and `app.py` reads its colours and copy from here instead of from
 module globals. Scoreboards are partitioned by `Mode.key` (the scoreboard's
-MODE column), while `scores.RULES` versions the scoring formula itself.
+MODE column), while `Mode.rules` versions the scoring formula itself.
 Adventure is the exception: it records under its experiment's own key (see
 `adventure.Experiment`), so its mode key only names the mode on the command line.
 """
@@ -23,6 +23,11 @@ STRAIGHT_PRACTICE = ('Swap two neighboring symbols.',
                      'Cleared symbols make room for new ones.',
                      'Chain reactions multiply your points.',
                      'L +100 / T +150 / Plus +200.')
+CLASSIC_PRACTICE = ('Swap two neighboring symbols.',
+                    'Align 4 or more in a row or column.',
+                    '5+ in a row, L, T, or plus: unstable symbol.',
+                    'Match it to detonate: +50 per extra tile.',
+                    'L +100 / T +150 / Plus +200.')
 DIAGONAL_PRACTICE = ('Swap any touching symbols, diagonals too.',
                      'Align 4+ in rows, columns, or diagonals.',
                      'Cleared symbols make room for new ones.',
@@ -44,6 +49,8 @@ class Mode:
     swaps: tuple = ORTHOGONAL        # directions a swap may reach
     moves: int | None = 30
     practice: tuple = STRAIGHT_PRACTICE
+    unstable: bool = False           # skilful matches leave unstable symbols (see board.py)
+    rules: str = 'shapes-v3'         # scoring-formula key saved with each score
 
     def __post_init__(self):
         if len(self.names) != len(self.colors):
@@ -63,6 +70,9 @@ CLASSIC = Mode(
     tagline='Four elements, straight lines.',
     names=ELEMENTS,
     colors=ELEMENT_COLORS,
+    practice=CLASSIC_PRACTICE,
+    unstable=True,
+    rules='unstable-v1',
 )
 
 DIAGONALS = Mode(

@@ -19,8 +19,8 @@ campaign progression, recovery, and mid-run saves are still proposals.
 
 The [Adventure reconciliation](adventure_suggestions.md#current-status--reconciled-2026-11-03)
 tracks completed findings and the remaining backlog. The latest design discussion
-is [unstable elements](#unstable-elements-proposed-design-2026-11-04), agreed but
-not yet implemented. Stir costs and stir tie-breakers remain deferred; the
+is [unstable elements](#unstable-elements-proposed-design-2026-11-04), implemented
+in Classic and awaiting playtesting. Stir costs and stir tie-breakers remain deferred; the
 Easy/Medium/Hard stir caps shipped in 0.1.8.
 
 Everything below is a dated design/review archive, not a current task checklist.
@@ -554,8 +554,9 @@ not proof of skill separation or final balance. Human playtesting is next.
 
 ## Unstable elements: proposed design (2026-11-04)
 
-Agreed in discussion; nothing is implemented yet. Numbers marked *initial* are
-starting points for playtesting, not tuned values.
+Agreed in discussion. Step 1 of the rollout (Classic) is implemented; see
+[Classic implementation](#unstable-elements-in-classic-implemented-2026-11-04) below.
+Numbers marked *initial* are starting points for playtesting, not tuned values.
 
 ### Concept
 
@@ -566,6 +567,10 @@ it, it detonates and clears extra tiles. Unstable tiles are earned only through
 skill (match shape), never spawned at random.
 
 ### Three tiers
+
+*Superseded 2026-11-05: measurement showed L/T shapes are rarer than 6+ runs, so the
+Square and Element sources were swapped. See
+[tier sources swapped](#unstable-tier-sources-swapped-2026-11-05).*
 
 | Earned by | Tier | Detonation clears |
 | --- | --- | --- |
@@ -639,6 +644,69 @@ rule, and should be tried only if the points approach fails in playtesting.
 
 - Should swapping two unstable tiles together trigger a combined effect, as in
   other match games? Out of scope for the first version.
-- Is a 6+ run too easy a route to the Element tier compared with a plus?
+- ~~Is a 6+ run too easy a route to the Element tier compared with a plus?~~
+  Yes; resolved by swapping tier sources on 2026-11-05.
 - Do chain reactions need a cap, or does the 8×8 board
   limit them enough?
+
+### Unstable elements in Classic implemented (2026-11-04)
+
+Implemented as designed above, Classic only, with `Mode.unstable` and a per-mode
+`Mode.rules` key. Classic records under `unstable-v1`; Diagonal and Adventure keep
+`shapes-v3`, and Classic's earlier `shapes-v3` scores appear as **Classic / before
+unstable symbols** on the scoreboard. Choices settled during implementation:
+
+- A Line symbol set off by another blast, with no matched run of its own to give it a
+  direction, clears both its row and column.
+- The highlighted pending set includes every blast, so the player sees the whole
+  reaction before it clears. New unstable symbols keep their cell; only the other
+  cleared cells are refilled (`Game.last_cleared` drives the fall animation).
+- A dead-board rebrew (and an Adventure stir, defensively) drops all unstable symbols.
+- Markers are drawn over the symbol: two stripes (Line), corner brackets (Square), a
+  ring (Element), pulsing gently unless reduced motion is on.
+
+Smoke measurement (tier sources as originally designed; superseded below), random legal move policy, 200 seeded Classic games (seeds 0-199,
+move choice `Random(10000 + seed)`): mean score 5,191 without unstable symbols and
+5,732 with them (+10%). Detonations per game: Line 1.57, Element 0.22, Square 0.09.
+Element outnumbers Square because random play produces 6+ runs (often through
+cascades) more often than L/T shapes. That bears on the open question of whether a 6+
+run is too easy a route to Element. Random play is not a skill measure; human
+playtesting is next, before Adventure.
+
+### Unstable tier sources swapped (2026-11-05)
+
+After playtesting, the player worried that Square and Element would rarely be seen.
+Measured with 200 seeded Classic games (seeds 0-199, move choice `Random(10000 + seed)`)
+under three one-move-lookahead policies: random legal moves; *greedy*, taking the
+swap that forms the strongest unstable symbol (random tie-break); and *seeker*,
+greedy plus a preference for swaps touching an existing unstable symbol.
+
+Original sources (5 run: Line; L/T: Square; plus or 6+ run: Element):
+
+| Policy | Formed per game (Line / Square / Element) | Games with a Square detonation | Games with an Element detonation | Mean score |
+| --- | --- | --- | --- | --- |
+| random | 3.73 / 0.17 / 0.41 | 9% | 18% | 5,732 |
+| greedy | 8.00 / 0.45 / 1.34 | 22% | 44% | 7,428 |
+| seeker | 8.02 / 0.55 / 1.51 | 23% | 52% | 7,975 |
+
+The intended middle tier was the rarest: on an 8×8 four-element board, crossing
+two 4+ runs is harder than making one 6+ run, and most Elements came from 6+ runs
+rather than pluses. The order of strength contradicted the order of difficulty.
+
+Swapped sources (5 run: Line; 6+ run: Square; any L/T/plus: Element), now implemented:
+
+| Policy | Formed per game (Line / Square / Element) | Games with a Square detonation | Games with an Element detonation | Mean score |
+| --- | --- | --- | --- | --- |
+| random | 3.71 / 0.36 / 0.20 | 17% | 10% | 5,619 |
+| greedy | 7.68 / 1.17 / 0.54 | 43% | 22% | 7,076 |
+| seeker | 7.66 / 1.25 / 0.57 | 47% | 20% | 7,138 |
+
+A shape-seeking player now sees a Square in about half of games and an Element in
+about a fifth, so the tiers are ordered by rarity. Other observations, both
+policies: a skilled player loses about 2 unstable symbols per game to dead-board
+rebrews (kept deliberately: "kind of brutal but I like it"), and roughly a third of
+symbols formed are still unused when the 30 moves run out. An end-of-game bonus for
+unused symbols is a possible later lever, deferred until playtesting. One-move
+lookahead understates a planning human, so real rates for Square and Element are
+likely somewhat higher.
+
