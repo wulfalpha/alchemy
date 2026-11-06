@@ -40,6 +40,7 @@ Or install into your Python environment with `python -m pip install -e .`, then 
 - Valid swaps use one of your 30 moves. Invalid swaps are reversed for free.
 - Cleared tiles refill from above; further matches produce cascades.
 - Each cleared symbol earns 25 points, with another 25 for each symbol beyond four **in each horizontal or vertical matched line**. A maximal line is scored only once. The total is multiplied by the cascade number. Intersections count each tile once. A true plus adds **200 points per crossing**, before the cascade multiplier: both horizontal and vertical runs must be 4+ symbols and extend on both sides of the crossing. T and L shapes earn their own bonuses, described below.
+- In **Classic**, five or more in a row or an L, T, or plus shape leaves behind an **unstable symbol**. Match it later to detonate it for extra clears and points; see [Unstable symbols](#unstable-symbols-classic).
 - **H** or **Hint** highlights a valid swap, without a penalty.
 - **R** or **New game** restarts. **C** switches mode. **Esc** quits. Once you have made a swap, R and C ask first: press the same key (or button) again to abandon the game, or anything else to keep playing.
 - Boards with no valid swaps are replaced automatically for free; the score and remaining moves carry over.
@@ -66,8 +67,8 @@ board is almost never dealt. A diagonal line earns the same per-symbol and long-
 points as a straight one, but only horizontal and vertical runs form L, T, and plus
 crossings.
 
-Classic and Diagonal are 8x8 with 30 moves and the same scoring formula, so only the symbol set and
-the directions change. Modes are defined as data in `src/alchemy/modes.py`; adding one is
+Classic and Diagonal are 8x8 with 30 moves. They share the same base scoring formula; Classic
+adds unstable symbols, described below, so the two modes have separate scoring-rule versions. Modes are defined as data in `src/alchemy/modes.py`; adding one is
 a `Mode(...)` entry in that file's registry for another 30-move variant.
 
 ### Adventure: First Transmutation
@@ -145,6 +146,9 @@ wins without those statistics remain ungraded. Ranking and saved score values
 are unchanged. These initial thresholds are informed by automated runs and remain
 subject to human playtesting; see [the calibration notes](docs/medal_calibration.md).
 
+Classic scores set before unstable symbols were added (rules `shapes-v3`) stay in their own
+**Classic / before unstable symbols** category, one **Tab** press away on the scoreboard.
+
 Earlier five-element, straight-lines-only play is retired. Scores set under those rules are
 kept and shown as **legacy** scores: open the scoreboard with **L** and press **Tab** to
 cycle through current, legacy, and experimental score categories. Both experimental
@@ -194,9 +198,9 @@ Released under the [MIT License](https://github.com/wulfalpha/alchemy/blob/main/
 
 ## Reliability and reaction feedback
 
-The window is resizable: the board keeps its proportions, and mouse controls scale with it. The reaction panel shows base points, longer-line points, plus points, and the cascade multiplier for the latest reaction.
+The window is resizable: the board keeps its proportions, and mouse controls scale with it. The reaction panel shows base points, longer-line points, unstable-symbol points when a detonation happened, shape points, and the cascade multiplier for the latest reaction.
 
-Scoring is `(25 × unique cleared tiles + 25 × sum of each line's length beyond 4 + 100 × L crossings + 150 × T crossings + 200 × plus crossings) × cascade number`. A four scores 100, a five 150, and a six 200. Two separate fours score 200; two crossing fours score 375 if they form a true plus. Multiple qualifying crossings, including those in solid blocks, each receive the plus bonus. Diagonals never count.
+Scoring is `(25 × unique cleared tiles + 25 × sum of each line's length beyond 4 + 100 × L crossings + 150 × T crossings + 200 × plus crossings) × cascade number`. A four scores 100, a five 150, and a six 200. Two separate fours score 200; two crossing fours score 375 if they form a true plus. Multiple qualifying crossings, including those in solid blocks, each receive the plus bonus. Diagonals never count. In Classic, each extra tile cleared by a detonation adds 50 inside the brackets (see [Unstable symbols](#unstable-symbols-classic)); the tiles of the matched lines themselves score as usual.
 
 Hints cycle through valid swaps without changing future tiles. With `--seed`, restarting intentionally repeats the same experiment.
 
@@ -265,3 +269,34 @@ Press **A** to toggle remembered reduced motion (no sweeps, fades, or falling
 animations). **Tab** inside the local scoreboard switches between new shape
 scoring and previous per-line scoring; historical scores are preserved separately.
 L and T reactions have their own `l_shape` and `t_shape` sounds.
+
+## Unstable symbols (Classic)
+
+Skilful matches in Classic leave behind an **unstable symbol** of the matched element.
+It swaps and matches like any other symbol of its element, but glows and carries a mark
+showing its type. When a later match includes it, it **detonates**:
+
+| Earned by | Type | Mark | Detonation clears |
+| --- | --- | --- | --- |
+| Exactly 5 in a row | **Line** | Two stripes | The whole row or column, in the direction of the match that set it off |
+| 6 or more in a row | **Square** | Corner brackets | The 3×3 block around it |
+| An L, T, or plus shape | **Element** | A ring | Every symbol of its element on the board |
+
+Rarer patterns earn stronger symbols. On this board, crossing shapes are harder to make
+than long lines, so they earn the Element.
+
+- The new symbol forms on the cell you swapped into the pattern, or else on the crossing
+  or the middle of the line. It stays in place while the other cleared cells refill.
+  A shape earns one symbol for the whole shape, not one per line.
+- Cascades can create them too.
+- Each extra tile a detonation clears scores **50**, multiplied by the cascade number.
+  The matched tiles score as usual. Before a reaction clears, the board highlights
+  everything it will take, blasts included.
+- An unstable symbol caught in another blast also detonates. A Line set off that way
+  clears both its row and column.
+- When a dead board is replaced, existing unstable symbols are lost.
+
+Each detonation type has its own sound (`line_burst`, `square_burst`,
+`element_burst`), as does forming a new unstable symbol (`unstable`). Unstable symbols
+are Classic-only for now; Diagonal and Adventure are unchanged. Classic scores with
+unstable symbols are saved under the scoring rules `unstable-v1`.

@@ -2,7 +2,7 @@
 
 ## Current implementation — reconciled 2026-11-03
 
-Local `main` at `68cfdd6` is version 0.1.7. Classic (four elements), Diagonal,
+Local `main` at `f9b9510` is version 0.1.8 (Adventure difficulties and medals). Classic (four elements), Diagonal,
 and finite-reactant Adventure are implemented, with local scoreboards, shape
 bonuses, motion/reduced motion, keyboard play, restart confirmation, bundled fonts,
 and built-in tones. Input/session logic lives in `app.py`; drawing lives in
@@ -19,8 +19,9 @@ campaign progression, recovery, and mid-run saves are still proposals.
 
 The [Adventure reconciliation](adventure_suggestions.md#current-status--reconciled-2026-11-03)
 tracks completed findings and the remaining backlog. The latest design discussion
-is [optional stir difficulty](#future-option-stirs-as-a-difficulty-setting-noted-2026-11-01);
-no alternative rule has been chosen.
+is [unstable elements](#unstable-elements-proposed-design-2026-11-04), implemented
+in Classic and awaiting playtesting. Stir costs and stir tie-breakers remain deferred; the
+Easy/Medium/Hard stir caps shipped in 0.1.8.
 
 Everything below is a dated design/review archive, not a current task checklist.
 Old source line numbers, test totals, release instructions, and claims of pending
@@ -550,3 +551,162 @@ See [calibration](medal_calibration.md): 960 runs across two policies, a seed sw
 and fixed seed 42 informed these initial thresholds. The visible-reaction policy
 did not consistently outperform random play; this is an initial tuning sample,
 not proof of skill separation or final balance. Human playtesting is next.
+
+## Unstable elements: proposed design (2026-11-04)
+
+Agreed in discussion. Step 1 of the rollout (Classic) is implemented; see
+[Classic implementation](#unstable-elements-in-classic-implemented-2026-11-04) below.
+Numbers marked *initial* are starting points for playtesting, not tuned values.
+
+### Concept
+
+Skilful matches leave behind an **unstable** tile of the matched element. It
+looks different but behaves as an ordinary tile of its element: it swaps,
+matches, and counts towards legal moves as usual. When a later match includes
+it, it detonates and clears extra tiles. Unstable tiles are earned only through
+skill (match shape), never spawned at random.
+
+### Three tiers
+
+*Superseded 2026-11-05: measurement showed L/T shapes are rarer than 6+ runs, so the
+Square and Element sources were swapped. See
+[tier sources swapped](#unstable-tier-sources-swapped-2026-11-05).*
+
+| Earned by | Tier | Detonation clears |
+| --- | --- | --- |
+| A straight run of exactly 5 | **Line** | The full board line through the tile, in the direction of the run that triggered it (row, column, or diagonal in Diagonal mode) |
+| An L or T crossing | **Square** | The 3×3 block centred on the tile |
+| A plus crossing, or a straight run of 6+ | **Element** | Every tile on the board of the tile's own element (reserves are untouched) |
+
+The hardest patterns earn the strongest tile. Element clears use the tile's own
+element so no extra selection step is needed; the player chooses by choosing
+which unstable tile to trigger.
+
+### Creation rules (initial)
+
+- One unstable tile per qualifying run or crossing. A run that forms part of an
+  L, T, or plus earns only the shape's tile, not a separate run tile as well.
+- The new tile replaces one of the cleared cells instead of being refilled:
+  the swapped cell if it belongs to the run, otherwise the crossing cell,
+  otherwise the middle of the run.
+- Cascades can create unstable tiles too. This rewards setting up cascades
+  and keeps the rules uniform. Revisit if they appear too often to feel earned.
+
+### Detonation rules (initial)
+
+- A run that contains an unstable tile detonates it. Line tiles in a crossing
+  clear both lines.
+- An unstable tile caught in another detonation also detonates (chain
+  reaction), resolved within the same step, before refill.
+- Tiles cleared by a detonation score **50 points each** (*initial*), times the
+  current cascade multiplier, on top of the ordinary match points. The status
+  line names the reaction, e.g. "Line reaction".
+
+### Adventure: why the payout is above 35 points per tile
+
+Detonations consume material, and Adventure ranks by material left. A run
+starts with 144 tiles (64 on the board, 80 in reserve). Gold requires 45 left, so
+at most 99 tiles may be spent to reach 3,500: about **35 points per tile**.
+Ordinary matches pay a base of 25 per tile, plus bonuses. Paying more than
+35 per detonated tile makes a well-placed detonation improve rank and medals,
+while a poorly timed one still wastes material. Returning detonated tiles to
+the reserves was considered and deferred: it introduces a new conservation
+rule, and should be tried only if the points approach fails in playtesting.
+
+### Implementation sketch
+
+- Keep the grid as plain element ints so `matched_runs`, `legal_moves`, and
+  hints are unchanged. Store unstable tiles in a parallel mapping on `Game`
+  (`{(x, y): tier}`) that `swap`, `refill`/`finite_refill`, and stirs carry
+  along with the tiles. New boards and stirs must not invent unstable tiles.
+- `resolve` gains: classify runs and crossings for creation, expand the
+  cleared set by detonations until stable, score, then refill around the
+  surviving new unstable tiles.
+- Presentation: a per-tier overlay on the symbol, a short detonation flash
+  (respecting reduced motion), and one synthesised tone per tier.
+
+### Records and rollout
+
+1. **Classic first**, where points are the whole score. Scoring changes, so
+   Classic needs a new rules key. `scores.RULES` (`shapes-v3`) is currently
+   shared by Classic and Diagonal, so rules keys must become per-mode, or both
+   modes move to a new key together. Old `shapes-v3` scores stay reachable.
+2. Playtest in Classic: frequency of each tier, whether the payout is too
+   strong, and readability of chain reactions.
+3. **Then Adventure**, with new experiment keys for each difficulty (as
+   `adventure-first-v2` did) and a re-run of `tools/measure_adventure.py` to
+   check whether the v1 medal thresholds still fit. If not, medals need the
+   historical-award policy noted above.
+4. **Diagonal** later, if at all: diagonal clears are already large, and the
+   Line tier's diagonal behaviour needs separate playtesting.
+
+### Open questions
+
+- Should swapping two unstable tiles together trigger a combined effect, as in
+  other match games? Out of scope for the first version.
+- ~~Is a 6+ run too easy a route to the Element tier compared with a plus?~~
+  Yes; resolved by swapping tier sources on 2026-11-05.
+- Do chain reactions need a cap, or does the 8×8 board
+  limit them enough?
+
+### Unstable elements in Classic implemented (2026-11-04)
+
+Implemented as designed above, Classic only, with `Mode.unstable` and a per-mode
+`Mode.rules` key. Classic records under `unstable-v1`; Diagonal and Adventure keep
+`shapes-v3`, and Classic's earlier `shapes-v3` scores appear as **Classic / before
+unstable symbols** on the scoreboard. Choices settled during implementation:
+
+- A Line symbol set off by another blast, with no matched run of its own to give it a
+  direction, clears both its row and column.
+- The highlighted pending set includes every blast, so the player sees the whole
+  reaction before it clears. New unstable symbols keep their cell; only the other
+  cleared cells are refilled (`Game.last_cleared` drives the fall animation).
+- A dead-board rebrew (and an Adventure stir, defensively) drops all unstable symbols.
+- Markers are drawn over the symbol: two stripes (Line), corner brackets (Square), a
+  ring (Element), pulsing gently unless reduced motion is on.
+
+Smoke measurement (tier sources as originally designed; superseded below), random legal move policy, 200 seeded Classic games (seeds 0-199,
+move choice `Random(10000 + seed)`): mean score 5,191 without unstable symbols and
+5,732 with them (+10%). Detonations per game: Line 1.57, Element 0.22, Square 0.09.
+Element outnumbers Square because random play produces 6+ runs (often through
+cascades) more often than L/T shapes. That bears on the open question of whether a 6+
+run is too easy a route to Element. Random play is not a skill measure; human
+playtesting is next, before Adventure.
+
+### Unstable tier sources swapped (2026-11-05)
+
+After playtesting, the player worried that Square and Element would rarely be seen.
+Measured with 200 seeded Classic games (seeds 0-199, move choice `Random(10000 + seed)`)
+under three one-move-lookahead policies: random legal moves; *greedy*, taking the
+swap that forms the strongest unstable symbol (random tie-break); and *seeker*,
+greedy plus a preference for swaps touching an existing unstable symbol.
+
+Original sources (5 run: Line; L/T: Square; plus or 6+ run: Element):
+
+| Policy | Formed per game (Line / Square / Element) | Games with a Square detonation | Games with an Element detonation | Mean score |
+| --- | --- | --- | --- | --- |
+| random | 3.73 / 0.17 / 0.41 | 9% | 18% | 5,732 |
+| greedy | 8.00 / 0.45 / 1.34 | 22% | 44% | 7,428 |
+| seeker | 8.02 / 0.55 / 1.51 | 23% | 52% | 7,975 |
+
+The intended middle tier was the rarest: on an 8×8 four-element board, crossing
+two 4+ runs is harder than making one 6+ run, and most Elements came from 6+ runs
+rather than pluses. The order of strength contradicted the order of difficulty.
+
+Swapped sources (5 run: Line; 6+ run: Square; any L/T/plus: Element), now implemented:
+
+| Policy | Formed per game (Line / Square / Element) | Games with a Square detonation | Games with an Element detonation | Mean score |
+| --- | --- | --- | --- | --- |
+| random | 3.71 / 0.36 / 0.20 | 17% | 10% | 5,619 |
+| greedy | 7.68 / 1.17 / 0.54 | 43% | 22% | 7,076 |
+| seeker | 7.66 / 1.25 / 0.57 | 47% | 20% | 7,138 |
+
+A shape-seeking player now sees a Square in about half of games and an Element in
+about a fifth, so the tiers are ordered by rarity. Other observations, both
+policies: a skilled player loses about 2 unstable symbols per game to dead-board
+rebrews (kept deliberately: "kind of brutal but I like it"), and roughly a third of
+symbols formed are still unused when the 30 moves run out. An end-of-game bonus for
+unused symbols is a possible later lever, deferred until playtesting. One-move
+lookahead understates a planning human, so real rates for Square and Element are
+likely somewhat higher.
+

@@ -5,10 +5,15 @@ count and the directions a line may run in. It defaults to the primary mode, so
 `matches(grid)` and `Game()` keep working unchanged.
 """
 from random import Random
-from .modes import DEFAULT_MODE
+from .modes import DEFAULT_MODE, ORTHOGONAL
 
 SIZE = 8
 PLUS_BONUS = 200
+# Unstable symbols (modes with `unstable=True`): skilful matches leave one behind,
+# and a later match that includes it detonates it. See docs/design_notes.md.
+LINE, SQUARE, ELEMENT = 'line', 'square', 'element'
+UNSTABLE_TIERS = (LINE, SQUARE, ELEMENT)
+UNSTABLE_POINTS = 50   # per tile cleared by a detonation, before the cascade multiplier
 
 
 def matched_runs(grid, mode=None):
@@ -55,6 +60,102 @@ def shape_crossings(grid, mode=None, runs=None):
                 ends = int(cell in (h[0], h[-1])) + int(cell in (v[0], v[-1]))
                 shapes[('plus', 't_shape', 'l_shape')[ends]].add(cell)
     return shapes
+
+
+def run_direction(run):
+    return (run[1][0] - run[0][0], run[1][1] - run[0][1])
+
+
+def blast_cells(grid, cell, tier, directions=ORTHOGONAL):
+    """Occupied cells one unstable symbol clears when it detonates (itself included).
+
+    Line: the whole board line through it in each direction given. Square: the
+    3x3 block around it. Element: every symbol on the board of its own element.
+    """
+    x, y = cell
+    if tier == ELEMENT:
+        value = grid[y][x]
+        return {(cx, cy) for cy in range(SIZE) for cx in range(SIZE) if grid[cy][cx] == value}
+    if tier == SQUARE:
+        cells = {(x + dx, y + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
+    else:
+        cells = {cell}
+        for dx, dy in directions:
+            for sign in (1, -1):
+                cx, cy = x + sign*dx, y + sign*dy
+                while 0 <= cx < SIZE and 0 <= cy < SIZE:
+                    cells.add((cx, cy))
+                    cx, cy = cx + sign*dx, cy + sign*dy
+    return {(cx, cy) for cx, cy in cells
+            if 0 <= cx < SIZE and 0 <= cy < SIZE and grid[cy][cx] is not None}
+
+
+def detonate(grid, runs, unstable):
+    """Everything a reaction clears: the matched runs plus every blast they set off.
+
+    A Line symbol in a matched run clears along that run's direction (both lines
+    if it sits on a crossing). Unstable symbols caught in a blast detonate too;
+    a Line set off that way clears its row and column. Returns
+    `(cleared, detonated)`, where `detonated` maps each symbol that went off to its tier.
+    """
+    cleared = {cell for run in runs for cell in run}
+    directions = {}
+    for run in runs:
+        for cell in run:
+            directions.setdefault(cell, set()).add(run_direction(run))
+    queue = sorted(cell for cell in cleared if cell in unstable)
+    detonated = {}
+    while queue:
+        cell = queue.pop()
+        if cell in detonated:
+            continue
+        detonated[cell] = unstable[cell]
+        for hit in blast_cells(grid, cell, unstable[cell], directions.get(cell, ORTHOGONAL)):
+            if hit not in cleared:
+                cleared.add(hit)
+                if hit in unstable:
+                    queue.append(hit)
+    return cleared, detonated
+
+
+def unstable_births(runs, shapes, swapped=()):
+    """Which cleared cells become unstable symbols, as `{cell: tier}`.
+
+    Rarer patterns earn stronger symbols: any L, T, or plus crossing earns
+    Element; a run of 6+ earns Square; a run of exactly 5 earns Line. A run that
+    is part of a shape earns nothing more. Each symbol forms on a swapped cell
+    when it belongs to the pattern, else on the crossing or the middle of the run.
+    """
+    births, used = {}, set()
+    for kind in ('plus', 't_shape', 'l_shape'):
+        for crossing in sorted(shapes[kind]):
+            members = set()
+            for index, run in enumerate(runs):
+                if crossing in run:
+                    used.add(index)
+                    members.update(run)
+            spot = next((c for c in (*(c for c in swapped if c in members), crossing)
+                         if c not in births), None)
+            if spot is not None:
+                births[spot] = ELEMENT
+    for index, run in enumerate(runs):
+        if index in used or len(run) < 5:
+            continue
+        candidates = (*(c for c in swapped if c in run), run[len(run)//2], *run)
+        spot = next((c for c in candidates if c not in births), None)
+        if spot is not None:
+            births[spot] = LINE if len(run) == 5 else SQUARE
+    return births
+
+
+def fall_positions(grid, cleared):
+    """Where each surviving symbol lands once `cleared` is removed and columns settle."""
+    positions = {}
+    for x in range(SIZE):
+        survivors = [y for y in range(SIZE) if (x, y) not in cleared and grid[y][x] is not None]
+        for target, y in enumerate(survivors, start=SIZE - len(survivors)):
+            positions[x, y] = (x, target)
+    return positions
 
 
 def adjacent(a, b, mode=None):
@@ -118,6 +219,9 @@ class Game:
         self.last_reaction = None
         self.hint_index = 0
         self.pending = set()
+        self.unstable = {}         # cell -> tier; empty unless the mode enables them
+        self.last_swap = ()
+        self.last_cleared = set()  # cells the latest reaction removed (new unstable symbols stay)
         self.message = 'Select a symbol, then an adjacent symbol.'
 
     @property
@@ -135,16 +239,29 @@ class Game:
             return False
         if not adjacent(a, b, self.mode):
             return False
-        swap(self.grid, a, b)
-        self.pending = matches(self.grid, self.mode)
+        self._swap(a, b)
+        self.pending = self._reaction_cells()
         if not self.pending:
-            swap(self.grid, a, b)
+            self._swap(a, b)
             self.message = 'Make a line of at least four. Try another swap.'
             return False
         if self.moves is not None:
             self.moves -= 1
         self.chain = 0
+        self.last_swap = (a, b)
         return True
+
+    def _swap(self, a, b):
+        swap(self.grid, a, b)
+        moved = {cell: self.unstable.pop(cell) for cell in (a, b) if cell in self.unstable}
+        for cell, tier in moved.items():
+            self.unstable[b if cell == a else a] = tier
+
+    def _reaction_cells(self):
+        """The cells the next reaction will clear, blasts included, so the board can show them."""
+        runs = matched_runs(self.grid, self.mode)
+        return detonate(self.grid, runs, self.unstable)[0] if self.unstable else \
+            {cell for run in runs for cell in run}
 
     def hint(self):
         if self.pending or self.finished:
@@ -161,29 +278,51 @@ class Game:
         if not self.pending:
             return []
         self.chain += 1
-        count = len(self.pending)
         runs = matched_runs(self.grid, self.mode)
         shapes = shape_crossings(self.grid, self.mode, runs)
+        matched = {cell for run in runs for cell in run}
+        blasted, detonated = detonate(self.grid, runs, self.unstable)
+        blasted -= matched
+        cleared = self.pending | blasted
+        births = (unstable_births(runs, shapes, self.last_swap if self.chain == 1 else ())
+                  if self.mode.unstable else {})
+        count = len(cleared - blasted)
         pluses = len(shapes['plus'])
         l_bonus = len(shapes['l_shape']) * 100
         t_bonus = len(shapes['t_shape']) * 150
         bonus = pluses * PLUS_BONUS
         length_bonus = sum((len(run) - 4) * 25 for run in runs)
-        points = (count * 25 + length_bonus + bonus + l_bonus + t_bonus) * self.chain
+        blast = len(blasted) * UNSTABLE_POINTS
+        points = (count * 25 + length_bonus + bonus + l_bonus + t_bonus + blast) * self.chain
         self.last_reaction = dict(base=count * 25, length=length_bonus, plus=bonus,
-                                  multiplier=self.chain, total=points, l_shape=l_bonus, t_shape=t_bonus)
+                                  multiplier=self.chain, total=points, l_shape=l_bonus, t_shape=t_bonus,
+                                  unstable=blast)
         self.hint_index = 0
         events = ["cascade" if self.chain > 1 else "match"]
         for shape, cells in shapes.items():
             if cells:
                 events.append(shape)
+        tiers = [tier for tier in UNSTABLE_TIERS if tier in detonated.values()]
+        events += [f'{tier}_burst' for tier in tiers]
+        if births:
+            events.append('unstable')
         self.score += points
-        self.message = f'{count} symbols transmuted!  +{points}  /  Cascade x{self.chain}'
+        self.message = f'{len(cleared)} symbols transmuted!  +{points}  /  Cascade x{self.chain}'
         labels = [label for key, label in (('l_shape', 'L reaction'), ('t_shape', 'T reaction'), ('plus', 'Plus reaction')) if shapes[key]]
+        labels += [f'{tier.title()} burst' for tier in tiers]
+        if births:
+            labels.append('Unstable symbol formed' if len(births) == 1 else f'{len(births)} unstable symbols formed')
         if labels:
             self.message += '  /  ' + ', '.join(labels)
+        # New unstable symbols take the place of a cleared cell instead of being refilled.
+        survivors = {cell: tier for cell, tier in self.unstable.items() if cell not in cleared}
+        survivors.update(births)
+        self.pending = cleared - births.keys()
+        landing = fall_positions(self.grid, self.pending)
         self._refill()
-        self.pending = matches(self.grid, self.mode)
+        self.last_cleared = self.pending
+        self.unstable = {landing[cell]: tier for cell, tier in survivors.items()}
+        self.pending = self._reaction_cells()
         self._settle(events)
         return events
 
@@ -193,6 +332,7 @@ class Game:
     def _settle(self, events):
         if not self.pending and self.moves and not legal_moves(self.grid, self.mode):
             self.grid = new_grid(self.rng, self.mode)
+            self.unstable = {}
             self.message = 'No swaps left: a fresh board has been brewed.'
             events.append("shuffle")
         if not self.pending and not self.moves:

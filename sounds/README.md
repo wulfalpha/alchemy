@@ -10,12 +10,16 @@ Drop short `.wav` or `.ogg` files here, then restart the game. No code changes r
 | match.wav | Clear the first match |
 | cascade.wav | Clear each subsequent cascade |
 | plus.wav | Award a plus bonus (alongside match/cascade) |
+| unstable.wav | Form a new unstable symbol (Classic) |
+| line_burst.wav | Detonate a Line unstable symbol |
+| square_burst.wav | Detonate a Square unstable symbol |
+| element_burst.wav | Detonate an Element unstable symbol |
 | hint.wav | Show a hint |
 | shuffle.wav | Automatically replace a dead board |
 | restart.wav | Start a new game with R or the button |
 | game_over.wav | Finish the last move, after all cascades |
 
-Use brief clips; effects can overlap. `plus` plays once per clear even with multiple crosses. No audio is bundled yet.
+Use brief clips; effects can overlap. `plus` plays once per clear even with multiple crosses. Without files, built-in tones play.
 
 Press **M** to mute/unmute. Default volume is 60%. Example:
 
@@ -29,3 +33,4 @@ uv run alchemy --mute
 Shape reactions also support `l_shape.wav` and `t_shape.wav` (or `.ogg`).
 L, T, and plus effects play once per shape type present in a clear, alongside
 its match/cascade effect. All clips remain optional.
+Each detonation sound likewise plays once per type in a clear.

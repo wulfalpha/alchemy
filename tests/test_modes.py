@@ -191,7 +191,7 @@ def test_retired_five_element_scores_are_kept_and_labelled_legacy(tmp_path):
     board.record('new', 'Bob', 5100, seed=7, mode=CLASSIC.key)
     assert [r['score'] for r in board.top(7, mode=CLASSIC.key)] == [5100]
     assert [r['score'] for r in board.top(7, mode=CLASSIC.key, rules=LEGACY_RULES)] == [4200]
-    assert RULE_HISTORY[0] == RULES and LEGACY_RULES in RULE_HISTORY
+    assert RULE_HISTORY[0] == CLASSIC.rules and RULES in RULE_HISTORY and LEGACY_RULES in RULE_HISTORY
     assert all(key in RULE_LABELS for key in RULE_HISTORY)
     assert 'Legacy' in RULE_LABELS[LEGACY_RULES]
     board.close()

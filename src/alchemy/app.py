@@ -122,7 +122,7 @@ class Session:
         return self.game.experiment.key if self.adventure else self.mode.key
 
     def categories(self):
-        return score_categories(self.score_mode(), self.mode.label)
+        return score_categories(self.score_mode(), self.mode.label, self.mode.rules)
 
     def reload_scores(self):
         category = self.categories()[self.category_index]
@@ -325,9 +325,9 @@ class Session:
         if (self.editing_name or self.motion.active(self.motion_time) or not self.game.pending
                 or self.motion_time < self.next_resolve):
             return
-        cleared = set(self.game.pending)
         previous_grid = [row[:] for row in self.game.grid]
         events = self.game.resolve()
+        cleared = self.game.last_cleared   # new unstable symbols stay put
         if not self.reduced_motion:
             if 'shuffle' in events:
                 self.motion.entrance(self.motion_time)
@@ -347,7 +347,7 @@ class Session:
         stats = (dict(material_left=self.game.material_left, swaps=self.game.turns, stirs=self.game.stirs)
                  if self.adventure else {})
         self.score_saved = self.scores.record(self.run_id, self.player, self.game.score, self.score_seed(),
-                                              mode=self.score_mode(), **stats)
+                                              mode=self.score_mode(), rules=self.mode.rules, **stats)
         self.reload_scores()
 
 
