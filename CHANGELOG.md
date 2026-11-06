@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Classic
+- **Unused unstable symbols pay out at the end.** Symbols still on the board when the
+  game ends, and symbols banked when a dead board was replaced, each add a flat bonus:
+  Line +100, Square +150, Element +200 (not multiplied by cascades). The bank's value
+  appears under the moves counter, and the completion screen shows the payout.
+- Classic scores now save under the `unstable-v2` rules. 0.1.9 scores stay in a
+  **Classic / without unused-symbol bonus** scoreboard category (press **Tab**).
+
 ## 0.1.9
 
 ### Classic

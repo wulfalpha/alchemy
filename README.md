@@ -146,8 +146,9 @@ wins without those statistics remain ungraded. Ranking and saved score values
 are unchanged. These initial thresholds are informed by automated runs and remain
 subject to human playtesting; see [the calibration notes](docs/medal_calibration.md).
 
-Classic scores set before unstable symbols were added (rules `shapes-v3`) stay in their own
-**Classic / before unstable symbols** category, one **Tab** press away on the scoreboard.
+Classic scores from earlier scoring rules stay in their own categories on the scoreboard:
+**Classic / without unused-symbol bonus** (0.1.9, rules `unstable-v1`) and **Classic / before
+unstable symbols** (rules `shapes-v3`). Press **Tab** to reach them.
 
 Earlier five-element, straight-lines-only play is retired. Scores set under those rules are
 kept and shown as **legacy** scores: open the scoreboard with **L** and press **Tab** to
@@ -294,9 +295,16 @@ than long lines, so they earn the Element.
   everything it will take, blasts included.
 - An unstable symbol caught in another blast also detonates. A Line set off that way
   clears both its row and column.
-- When a dead board is replaced, existing unstable symbols are lost.
+- When a dead board is replaced, the unstable symbols on it are lost to play but
+  **banked**. The message line announces it, and the bank's value appears in gold
+  under the moves counter.
+- When the game ends, every unstable symbol you never detonated pays a flat bonus,
+  whether it's still on the board or banked: **Line +100, Square +150, Element +200**.
+  The bonus is not multiplied by cascades and is shown on the completion screen.
+  A detonation is usually worth more, so using a symbol beats saving it.
 
 Each detonation type has its own sound (`line_burst`, `square_burst`,
 `element_burst`), as does forming a new unstable symbol (`unstable`). Unstable symbols
-are Classic-only for now; Diagonal and Adventure are unchanged. Classic scores with
-unstable symbols are saved under the scoring rules `unstable-v1`.
+are Classic-only for now; Diagonal and Adventure are unchanged. Classic scores are saved under the scoring rules `unstable-v2`.
+Scores from 0.1.9, before the unused-symbol bonus, stay in their own
+**Classic / without unused-symbol bonus** category, one **Tab** press away.

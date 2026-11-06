@@ -710,3 +710,28 @@ unused symbols is a possible later lever, deferred until playtesting. One-move
 lookahead understates a planning human, so real rates for Square and Element are
 likely somewhat higher.
 
+### Unused-symbol bank and bonus (2026-11-05)
+
+0.1.9 shipped unstable symbols; about a third were never used, and dead-board
+rebrews took about 2 per game from a skilled player. Rebrews still remove symbols
+from play (the player likes that it is "kind of brutal"), but they now go into a
+**bank**. When the game ends, every undetonated symbol, on the board or banked,
+pays a flat bonus: Line +100, Square +150, Element +200, with no cascade
+multiplier. Values sit below a typical detonation (a Line clears at least 4 extra
+tiles, 200+ points before the multiplier), so detonating stays the better play.
+Classic moves to the `unstable-v2` rules; `unstable-v1` scores remain reachable as
+**Classic / without unused-symbol bonus**.
+
+Measured with the same 200 seeded games and policies as the tier comparison:
+
+| Policy | Mean score | Mean bonus (max) | Left on board / banked per game | Bonus share of score |
+| --- | --- | --- | --- | --- |
+| random | 5,863 | 244 (700) | 1.15 / 1.12 | 4.2% |
+| greedy | 7,576 | 499 (1,300) | 2.20 / 2.28 | 6.6% |
+| seeker | 7,642 | 504 (1,550) | 2.23 / 2.23 | 6.6% |
+
+Adventure will not use a bank or bonus: a stir rearranges the same material, so
+unstable markers should travel with their tiles through a stir, and leftover
+symbols already count as material left. A finale where on-board symbols detonate
+in sequence at game end remains a possible later upgrade to the flat bonus.
+

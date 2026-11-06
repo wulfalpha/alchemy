@@ -78,7 +78,8 @@ class ClassicView:
     """Classic and Diagonal: a move budget and the practice notes."""
 
     def counter(self, game):
-        return f'{game.moves:02d}', 'MOVES LEFT', None
+        note = f'Banked: +{game.banked_value}' if game.banked and game.unused_bonus is None else None
+        return f'{game.moves:02d}', 'MOVES LEFT', note
 
     def panel(self, canvas, session):
         canvas.text('The practice', (662, 305), 24)
@@ -92,8 +93,17 @@ class ClassicView:
         return status
 
     def end_details(self, canvas, game):
-        canvas.text('L: view scores    R: new experiment', (122, 465), 16)
+        bonus = game.unused_bonus
+        if bonus and bonus['total']:
+            parts = [f"{bonus['on_board']} on the board"] if bonus['on_board'] else []
+            parts += [f"{bonus['banked']} banked"] if bonus['banked'] else []
+            canvas.text(f"Unused unstable symbols: +{bonus['total']}  ({', '.join(parts)})",
+                        (122, 452), 16, GOLD)
+            canvas.text('L: view scores    R: new experiment', (122, 485), 16)
+        else:
+            canvas.text('L: view scores    R: new experiment', (122, 465), 16)
 
+    note_color = GOLD   # the unstable-symbol bank is a reward, so it stands out
     score_row_height = 33
     tab_hint = 'Tab: current and legacy scoring'
     record_status = 'New local high score!'
@@ -149,6 +159,7 @@ class AdventureView:
         canvas.text(f'Successful swaps: {game.turns} / Stirs: {game.stirs}', (122, 504), 16)
         canvas.text('L: view scores    R: retry experiment', (122, 548), 16)
 
+    note_color = MUTED
     score_row_height = 34
     tab_hint = 'Tab: current and original experiment'
     record_status = 'New local best: most material left!'
@@ -265,7 +276,7 @@ def draw_panel(canvas, session, view):
     canvas.text(value, (855, 179), 48)
     canvas.text(label, (847, 244), 14, MUTED)
     if note:
-        canvas.text(note, (817, 264), 14, MUTED)
+        canvas.text(note, (817, 264), 14, view.note_color)
     pygame.draw.line(screen, RULE, (662, 282), (982, 282))
     view.panel(canvas, session)
     step = PANEL_WIDTH // len(session.symbols)
