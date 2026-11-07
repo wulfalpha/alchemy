@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.13
 
 ### Sound
 - **Explosions sound like explosions.** Line, Square and Element bursts now have a
