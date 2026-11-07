@@ -6,8 +6,9 @@ from pathlib import Path
 
 os.environ.setdefault('PYGAME_HIDE_SUPPORT_PROMPT', '1')
 import pygame
-from .board import Game, SIZE, adjacent
-from .adventure import AdventureGame, EXPERIMENTS, CAMPAIGN_KITS, CHAPTER, experiment_medal
+from .board import SALT, Game, SIZE, adjacent
+from .adventure import AdventureGame, EXPERIMENTS, CAMPAIGN_KITS, chapter_of, experiment_medal
+from .medals import MEDAL_RANK
 from .resources import load_symbols
 from .audio import Audio
 from .scores import Scoreboard, score_categories
@@ -134,7 +135,12 @@ class Session:
     def tagline(self):
         if not self.campaign:
             return self.mode.tagline
-        return f'{CHAPTER}: stage {self.kit_index + 1} of {len(CAMPAIGN_KITS)}'
+        chapter, first = self.chapter()
+        return f'{chapter.name}: stage {self.kit_index - first + 1} of {len(chapter.kits)}'
+
+    def chapter(self):
+        """The current stage's chapter and the index of its first stage."""
+        return chapter_of(self.kit_index)
 
     def score_seed(self):
         return self.game.seed if isinstance(self.game, AdventureGame) else self.args.seed
@@ -155,8 +161,9 @@ class Session:
         """The medal of the best saved win of a campaign stage, or None."""
         experiment = kit.experiment
         seed = experiment.seed if self.args.seed is None else self.args.seed
-        best = self.scores.top(seed, mode=experiment.key, rules=self.mode.rules)
-        return experiment_medal(experiment, best[0]['material_left'], best[0]['swaps']) if best else None
+        medals = [experiment_medal(experiment, entry['material_left'], entry['swaps'], entry['stirs'])
+                  for entry in self.scores.top(seed, mode=experiment.key, rules=self.mode.rules)]
+        return max(filter(None, medals), key=MEDAL_RANK.get, default=None)
 
     @property
     def stage_won(self):
@@ -173,7 +180,9 @@ class Session:
 
     @property
     def chapter_complete(self):
-        return self.stage_won and self.kit_index == len(CAMPAIGN_KITS) - 1
+        """The last stage of a chapter has just been won."""
+        chapter, first = self.chapter()
+        return self.stage_won and self.kit_index == first + len(chapter.kits) - 1
 
     def advance_stage(self):
         self.kit_index += 1
@@ -247,7 +256,7 @@ class Session:
             return
         if self.game.undo():
             self.selected = self.hint = None
-            self.audio.play('restart')
+            self.audio.play('undo')
         elif not self.game.history:
             self.game.message = 'Nothing to undo.'
 
@@ -371,9 +380,12 @@ class Session:
             self.cursor = (min(SIZE - 1, max(0, x + dx)), min(SIZE - 1, max(0, y + dy)))
 
     def press_cell(self, cell):
-        """A click or Enter on a board cell; empty Adventure cells do nothing."""
+        """A click or Enter on a board cell; empty Adventure cells do nothing, salt explains."""
         x, y = cell
-        if self.game.grid[y][x] is not None:
+        if self.game.grid[y][x] == SALT:
+            self.game.message = "Salt can't be moved. Match water beside it, or blast it."
+            self.audio.play('salt')
+        elif self.game.grid[y][x] is not None:
             self.select(cell)
 
     def select(self, cell):
@@ -381,7 +393,7 @@ class Session:
         self.hint = None
         if self.selected == cell:
             self.selected = None
-        elif self.selected is not None and adjacent(self.selected, cell, self.mode):
+        elif self.selected is not None and adjacent(self.selected, cell, self.game.mode):
             if self.game.attempt(self.selected, cell):
                 self.audio.play('swap')
                 self.swapped = True
@@ -416,11 +428,26 @@ class Session:
             else:
                 self.motion.fall(cleared, self.motion_time, previous_grid)
         for sound_event in events:
-            self.audio.play(sound_event)
             if sound_event == 'game_over':
+                self.audio.play(self.finale_sound())
                 self.record_score()
+            else:
+                self.audio.play(sound_event)
         self.clear_started = self.motion_time + (0 if self.reduced_motion else self.motion.duration)
         self.next_resolve = self.clear_started + 350
+
+    def finale_sound(self):
+        """The end-of-game sound: Classic's game over, or an Adventure win (a bigger one for
+        a campaign chapter's last stage) or stall."""
+        if not self.adventure:
+            return 'game_over'
+        if self.game.outcome != 'success':
+            return 'failure'
+        if self.campaign:
+            chapter, first = self.chapter()
+            if self.kit_index == first + len(chapter.kits) - 1:
+                return 'chapter_complete'
+        return 'success'
 
     def record_score(self):
         """Save a finished run once; Adventure saves only successful experiments."""

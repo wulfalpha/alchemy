@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased
+
+### Sound
+- **Explosions sound like explosions.** Line, Square and Element bursts now have a
+  falling thump, a crack and (for Square and Element) a rumbling roar under their bells,
+  growing with the size of the blast.
+- **New sounds:** salt fizzing as it dissolves; a dull stone knock when you click salt;
+  a soft rewind for undo on plates; a rising chime when an Adventure experiment or
+  campaign stage is won, a falling one when it stalls, and a fanfare for completing a
+  chapter. Each can be replaced with a file (see `sounds/README.md`).
+
+### Campaign
+- **Chapter 2, The Tria Prima, begins.** Finishing Chapter 1 now shows its medals and
+  offers the next chapter with **Enter**. The header shows the current chapter's stages.
+  Players who already finished Chapter 1 find Chapter 2 open.
+- **Stage 5, Sulfur: The Burning.** Reach 3,500 points with only **2 stirs**. Silver at
+  40 material left; **Gold for any win without stirring**.
+- **Stage 6, Mercury: Quicksilver.** Detonate 5 unstable symbols with 12 of each
+  element and 8 stirs, swapping and matching **diagonally** as well as straight. A Line
+  symbol made in a diagonal run blasts along that diagonal. Silver 30, Gold 40.
+- **Stage 7, Salt: Fixation.** Six **salt** tiles sit on the board: they fall but can't
+  be swapped or matched. Salt dissolves in water: match water beside it, or blast it with
+  an unstable symbol. Dissolve all six; 20 of each element, 8 stirs. Silver 40, Gold 70.
+- **Stage 8, Quintessence: The Philosopher's Plate.** The chapter's finale: a fixed plate
+  where you clear every fire **and** water tile within 8 swaps, with an Element, a Line
+  and a Square symbol and two salt tiles. One 6-swap solution, proven by the solver, uses
+  every symbol. Gold in 6, Silver in 7.
+- Winning a plate now says "New local best: fewest swaps!" (plates rank by swaps).
+- Long stage names no longer run off the sidebar or the chapter medal list.
+- A stage's medal dot shows its best medal, even when that is not the top-ranked run
+  (a no-stir Gold can leave less material than a stirred Silver).
+
 ## 0.1.12
 
 ### Campaign

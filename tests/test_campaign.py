@@ -6,8 +6,8 @@ import pygame
 import pytest
 
 import alchemy.app as app
-from alchemy.adventure import (CAMPAIGN_KITS, DETONATE, EXPERIMENTS, PREVIOUS_EXPERIMENTS, PURIFY,
-                               medal_thresholds)
+from alchemy.adventure import (CAMPAIGN_KITS, CHAPTERS, DETONATE, EXPERIMENTS, PREVIOUS_EXPERIMENTS, PURIFY,
+                               chapter_of, experiment_medal, medal_thresholds, saved_medal)
 from alchemy.board import ELEMENT
 from alchemy.audio import Audio
 from alchemy.modes import CAMPAIGN, MODES
@@ -256,6 +256,112 @@ def test_stage_medals_show_each_stages_best_win(tmp_path):
     assert s.stage_medals[0] == 'Gold' and s.stage_medals[1:] == [None] * (len(CAMPAIGN_KITS) - 1)
 
 
+# ---------- chapters ----------
+
+RED_PLATE, BURNING = 3, 4      # the last stage of Chapter 1 and the first of Chapter 2
+
+
+def test_chapters_hold_the_stages_in_unlock_order():
+    assert [chapter.name for chapter in CHAPTERS] == ['Chapter 1', 'Chapter 2']
+    assert [c.title for c in CHAPTERS] == ['The Great Work', 'The Tria Prima']
+    assert CAMPAIGN_KITS == tuple(kit for chapter in CHAPTERS for kit in chapter.kits)
+    assert chapter_of(RED_PLATE) == (CHAPTERS[0], 0)
+    assert chapter_of(BURNING) == (CHAPTERS[1], 4)
+    with pytest.raises(IndexError):
+        chapter_of(len(CAMPAIGN_KITS))
+
+
+def test_the_burning_gives_two_stirs_and_gold_only_without_stirring():
+    kit = CAMPAIGN_KITS[BURNING]
+    burning = kit.experiment
+    assert kit.stage == 'Sulfur' and burning.title == 'The Burning'
+    assert burning.stir_limit == 2 and burning.gold_stirs == 0 and burning.objective == 'points'
+    assert experiment_medal(burning, 5, 30, stirs=0) == 'Gold'
+    assert experiment_medal(burning, 45, 30, stirs=1) == 'Silver'
+    assert experiment_medal(burning, 39, 30, stirs=2) == 'Bronze'
+    assert experiment_medal(burning, 45, 30) == 'Silver'           # stirs unknown: no Gold
+    assert saved_medal(burning.key, 45, 30, 0) == 'Gold'
+    assert saved_medal(burning.key, 45, 30, 1) == 'Silver'
+
+
+def test_a_stir_gated_gold_still_shows_as_the_stages_best_medal(tmp_path):
+    s = session(tmp_path)
+    key = CAMPAIGN_KITS[BURNING].experiment.key
+    s.scores.record('a', 'T', 4000, 42, mode=key, rules=s.mode.rules, material_left=50, swaps=30, stirs=2)
+    s.scores.record('b', 'T', 4000, 42, mode=key, rules=s.mode.rules, material_left=12, swaps=30, stirs=0)
+    s.reload_scores()
+    assert s.stage_medals[BURNING] == 'Gold'
+
+
+def test_finishing_chapter_1_leads_into_chapter_2(tmp_path):
+    s = session(tmp_path)
+    s.scores.unlock_campaign(RED_PLATE + 1)
+    s.kit_index = RED_PLATE
+    s.start_new_game()
+    finish(s)
+    assert s.chapter_complete and s.next_kit is CAMPAIGN_KITS[BURNING]
+    assert 'Sulfur unlocked' in s.game.message
+    press(s, pygame.K_RETURN)
+    assert s.kit is CAMPAIGN_KITS[BURNING] and not s.game.finished
+    assert s.tagline() == f'Chapter 2: stage 1 of {len(CHAPTERS[1].kits)}'
+    assert s.chapter() == (CHAPTERS[1], BURNING)
+
+
+def test_players_who_finished_chapter_1_find_chapter_2_open(tmp_path):
+    Scoreboard(tmp_path).unlock_campaign(RED_PLATE + 2)       # recorded past the old last stage
+    assert session(tmp_path).kit is CAMPAIGN_KITS[BURNING]
+
+
+QUICKSILVER = 5
+
+
+def test_quicksilver_swaps_and_matches_diagonally():
+    from alchemy.adventure import AdventureGame
+    from alchemy.board import legal_moves
+    from alchemy.modes import ADVENTURE, DIAGONAL
+    kit = CAMPAIGN_KITS[QUICKSILVER]
+    assert kit.stage == 'Mercury' and kit.experiment.diagonal
+    assert kit.experiment.objective == DETONATE and kit.experiment.detonations == 5
+    game = AdventureGame(experiment=kit.experiment)
+    assert game.mode.directions == game.mode.swaps == DIAGONAL and game.mode.unstable
+    diagonal = [(a, b) for a, b in legal_moves(game.grid, game.mode) if a[0] != b[0] and a[1] != b[1]]
+    assert diagonal and diagonal[0] not in legal_moves(game.grid, ADVENTURE)
+    assert game.attempt(*diagonal[0])
+    plain = AdventureGame(experiment=CAMPAIGN_KITS[BURNING].experiment)
+    assert plain.mode.swaps == plain.mode.directions != DIAGONAL
+
+
+def test_a_diagonal_line_symbol_blasts_its_whole_diagonal():
+    from alchemy.board import LINE, detonate, matched_runs, unstable_births, shape_crossings
+    from alchemy.modes import DIAGONAL, ADVENTURE
+    mode = replace(ADVENTURE, directions=DIAGONAL, swaps=DIAGONAL, unstable=True)
+    grid = [[(x + 2*y) % 4 for x in range(8)] for y in range(8)]   # no runs in any direction
+    for i in range(1, 5):
+        grid[i][i] = 1
+    runs = matched_runs(grid, mode)
+    assert runs == [[(1, 1), (2, 2), (3, 3), (4, 4)]]
+    cleared, detonated = detonate(grid, runs, {(2, 2): LINE})
+    assert detonated == {(2, 2): LINE} and cleared == {(i, i) for i in range(8)}
+    grid[5][5] = 1                                                 # five in a diagonal: a Line forms
+    runs = matched_runs(grid, mode)
+    assert list(unstable_births(runs, shape_crossings(grid, mode, runs)).values()) == [LINE]
+
+
+def test_clicking_a_diagonal_neighbour_swaps_only_in_quicksilver(tmp_path):
+    from alchemy.board import legal_moves
+    s = session(tmp_path)
+    s.scores.unlock_campaign(QUICKSILVER + 1)
+    for index, swaps in ((BURNING, False), (QUICKSILVER, True)):
+        s.kit_index = index
+        s.start_new_game()
+        s.motion.finish()
+        moves = legal_moves(s.game.grid, s.game.mode)
+        a, b = next(((a, b) for a, b in moves if a[0] != b[0] and a[1] != b[1]), ((0, 0), (1, 1)))
+        s.select(a)
+        s.select(b)
+        assert (s.game.turns == 1) is swaps
+
+
 def test_win_and_chapter_screens_draw(tmp_path):
     from alchemy.render import Canvas, draw
     canvas = Canvas()
@@ -266,6 +372,11 @@ def test_win_and_chapter_screens_draw(tmp_path):
     s.kit_index = len(CAMPAIGN_KITS) - 1
     s.start_new_game()
     finish(s)
+    draw(canvas, s)
+    s.kit_index = RED_PLATE                       # Chapter 1 complete, Chapter 2 offered
+    s.start_new_game()
+    finish(s)
+    assert s.chapter_complete and s.next_kit
     draw(canvas, s)
 
 
@@ -299,3 +410,103 @@ def test_u_does_nothing_outside_plates(tmp_path):
     message = s.game.message
     press(s, pygame.K_u)
     assert s.game.message == message
+
+
+def test_clicking_salt_explains_instead_of_selecting(tmp_path):
+    s = session(tmp_path)
+    s.scores.unlock_campaign(7)
+    s.kit_index = 6
+    s.start_new_game()
+    s.motion.finish()
+    x, y = CAMPAIGN_KITS[6].experiment.salt[0]
+    s.press_cell((x, y))
+    assert s.selected is None and "Salt can't be moved" in s.game.message
+
+
+# ---------- sounds ----------
+
+def listen(s):
+    heard = []
+    s.audio.play = heard.append
+    return heard
+
+
+def test_campaign_sounds_salt_undo_and_finales(tmp_path):
+    s = session(tmp_path)
+    heard = listen(s)
+    s.scores.unlock_campaign(7)
+    s.kit_index = 6
+    s.start_new_game()
+    s.motion.finish()
+    s.press_cell(CAMPAIGN_KITS[6].experiment.salt[0])
+    assert heard[-1] == 'salt'
+
+    s.game.outcome = 'success'
+    s.kit_index = BURNING
+    assert s.finale_sound() == 'success'
+    s.kit_index = RED_PLATE                       # the last stage of Chapter 1
+    assert s.finale_sound() == 'chapter_complete'
+    s.game.outcome = 'stalled'
+    assert s.finale_sound() == 'failure'
+
+    s.start_new_game()
+    s.motion.finish()
+    assert s.game.attempt((6, 2), (7, 2))
+    while s.game.pending:
+        s.game.resolve()
+    press(s, pygame.K_u)
+    assert heard[-1] == 'undo'
+
+
+def test_classic_keeps_its_game_over_sound(tmp_path):
+    s = session(tmp_path, mode='classic-30')
+    assert s.finale_sound() == 'game_over'
+
+
+# ---------- the Philosopher's Plate ----------
+
+PHILOSOPHERS = 7
+
+
+def test_the_philosophers_plate_has_one_best_line_that_needs_every_symbol():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
+    from solve_plate import play, solve
+    from alchemy.adventure import AdventureGame
+    from alchemy.board import ELEMENT, LINE, SQUARE
+    kit = CAMPAIGN_KITS[PHILOSOPHERS]
+    plate = kit.experiment
+    assert kit.stage == 'Quintessence' and plate.element == (0, 1) and plate.dissolver == 1
+    assert plate.swap_limit == 8 and plate.medals == (7, 6)
+    best, lines, _ = solve(plate)
+    assert best == 6 and len(lines) == 1
+    for tier in (ELEMENT, LINE, SQUARE):
+        without = replace(plate, marks=tuple(m for m in plate.marks if m[1] != tier))
+        assert solve(without)[0] is None, tier
+    game = AdventureGame(experiment=plate)
+    salt = game.salt_left
+    for move in lines[0]:
+        game = play(game, move)
+    assert game.outcome == 'success' and game.salt_left < salt and game.medal == 'Gold'
+
+
+def test_chapter_2_ends_on_the_philosophers_plate(tmp_path):
+    s = session(tmp_path)
+    s.scores.unlock_campaign(len(CAMPAIGN_KITS))
+    s.kit_index = PHILOSOPHERS
+    s.start_new_game()
+    assert s.chapter() == (CHAPTERS[1], BURNING) and len(CHAPTERS[1].kits) == 4
+    s.game.outcome = 'success'
+    assert s.finale_sound() == 'chapter_complete'
+    s.kit_index = 6
+    assert s.finale_sound() == 'success'
+
+
+def test_plate_records_praise_fewest_swaps():
+    from alchemy.adventure import AdventureGame
+    from alchemy.render import AdventureView
+    view = AdventureView()
+    assert view.record_text(AdventureGame(experiment=CAMPAIGN_KITS[PHILOSOPHERS].experiment)) == \
+        'New local best: fewest swaps!'
+    assert 'material' in view.record_text(AdventureGame(experiment=CAMPAIGN_KITS[BURNING].experiment))

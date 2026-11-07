@@ -7,6 +7,8 @@ win and how many distinct winning lines of that length exist.
 Run from the checkout:
   uv run python tools/solve_plate.py                 # solve the shipped Red Plate
   uv run python tools/solve_plate.py --generate 300  # search seeds for new plates
+  uv run python tools/solve_plate.py --finale 300    # search for Philosopher's Plate candidates
+  uv run python tools/solve_plate.py --finale 300 --salt 2
 """
 import argparse
 import copy
@@ -15,7 +17,7 @@ from dataclasses import replace
 from random import Random
 
 from alchemy.adventure import CAMPAIGN_KITS, PURIFY, AdventureGame, Experiment
-from alchemy.board import LINE, SIZE, SQUARE, legal_moves, matches
+from alchemy.board import ELEMENT, LINE, SALT, SIZE, SQUARE, legal_moves, matches
 
 
 # Clear every fire tile from a plate with no reserves.
@@ -101,6 +103,57 @@ def random_plate(rng, fire=8):
     raise RuntimeError('no plate found')
 
 
+# The Philosopher's Plate: clear every fire and water tile; water dissolves salt.
+FINALE_BASE = replace(PLATE_BASE, key='adventure-plate-finale-candidate', element=(0, 1), dissolver=1)
+
+
+def random_finale_plate(rng, fire=7, water=(5, 8), salt=0):
+    """A gravity-stable plate with no ready match: `fire` fire, a random count of water in
+    the `water` range, `salt` salt tiles, an Element symbol on a fire tile, and a Line and
+    a Square on other tiles."""
+    for _ in range(1000):
+        heights = [rng.randint(5, 8) for _ in range(SIZE)]
+        cells = [(x, y) for x in range(SIZE) for y in range(SIZE - heights[x], SIZE)]
+        wet = rng.randint(*water)
+        if len(cells) < fire + wet + salt + 12:
+            continue
+        values = [0] * fire + [1] * wet + [SALT] * salt
+        values += [rng.choice((2, 3)) for _ in range(len(cells) - len(values))]
+        rng.shuffle(values)
+        grid = [[None] * SIZE for _ in range(SIZE)]
+        for (x, y), value in zip(cells, values):
+            grid[y][x] = value
+        if matches(grid):
+            continue
+        fires = [cell for cell in cells if grid[cell[1]][cell[0]] == 0]
+        others = [cell for cell in cells if grid[cell[1]][cell[0]] in (1, 2, 3)]
+        element = rng.choice(fires)
+        line, square = rng.sample(others, 2)
+        letters = {None: '.', SALT: 's', 0: 'f', 1: 'w', 2: 'a', 3: 'e'}
+        layout = tuple(''.join(letters[v] for v in row) for row in grid)
+        return layout, ((element, ELEMENT), (line, LINE), (square, SQUARE))
+    raise RuntimeError('no plate found')
+
+
+def generate_finale(count, salt=0, swap_limit=7, start=0):
+    """Print finale plates whose best line needs 5-6 swaps and that can't be won without
+    the Element symbol."""
+    for seed in range(start, start + count):
+        layout, marks = random_finale_plate(Random(seed), salt=salt)
+        candidate = replace(FINALE_BASE, layout=layout, marks=marks, swap_limit=swap_limit)
+        if solve(candidate, limit=4)[0] is not None:
+            continue                                  # too easy
+        best, lines, searched = solve(candidate, limit=6)
+        if best is None:
+            continue
+        without = replace(candidate, marks=tuple(m for m in marks if m[1] != ELEMENT))
+        if solve(without)[0] is not None:
+            continue                                  # the Element blast must matter
+        print(f'seed {seed}: best {best}, {len(lines)} winning lines, {searched} positions')
+        print('  layout=' + repr(layout))
+        print('  marks=' + repr(marks), flush=True)
+
+
 def generate(count, base, swap_limit=6):
     """Print plates whose best line needs 4-5 swaps and is impossible without symbols."""
     for seed in range(count):
@@ -122,7 +175,13 @@ def generate(count, base, swap_limit=6):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--generate', type=int, metavar='SEEDS', help='Try this many generator seeds')
+    parser.add_argument('--finale', type=int, metavar='SEEDS', help="Try this many Philosopher's Plate seeds")
+    parser.add_argument('--salt', type=int, default=0, help='Salt tiles on each finale candidate')
+    parser.add_argument('--start', type=int, default=0, help='First finale seed')
     args = parser.parse_args()
+    if args.finale:
+        generate_finale(args.finale, salt=args.salt, start=args.start)
+        return
     plates = [kit.experiment for kit in CAMPAIGN_KITS if kit.experiment.layout]
     if args.generate:
         generate(args.generate, PLATE_BASE)

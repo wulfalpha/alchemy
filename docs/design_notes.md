@@ -913,3 +913,151 @@ mode, and experiment), and undo restores it, swap count included. Undo is free b
 R already replays the deterministic plate with no penalty; it only saves replaying from
 the start. It works after a stall (no swaps left, blocked plate) but not after a win,
 whose score is already saved. Other Adventure kits refill randomly, so they have no undo.
+
+## Campaign Chapter 2, The Tria Prima: proposed design (2026-11-07)
+
+Chapter 2 follows the three principles of alchemy (Sulfur, Mercury, Salt) and ends on a
+fixed plate, as Chapter 1 does. It opens once The Red Plate is won. Each stage brings in
+one new idea. Numbers marked *initial* are to be calibrated on seed 42 (kits) or with
+`tools/solve_plate.py` (the plate).
+
+| # | Stage | Rule | Teaches | Engine work |
+| --- | --- | --- | --- | --- |
+| 1 | **Sulfur: The Burning** | Points target with only **2 stirs**. Gold requires winning with **no stirs**; Silver and Bronze are graded on material as usual | Look ahead at what each swap leaves behind | A stir condition on the Gold medal |
+| 2 | **Mercury: Quicksilver** | Diagonal swaps and matches with unstable symbols switched on | Diagonal play | Each kit chooses its mode; unstable symbols in Diagonal |
+| 3 | **Salt: Fixation** | **Immovable salt tiles** on the board | Working around fixed obstacles | Salt tiles: cannot be swapped or matched |
+| 4 | **The Philosopher's Plate** | Fixed plate that clears two elements and can only be solved with an Element blast | Bringing everything together | Plates with more than one target element |
+
+Decisions (player, 2026-11-07): the Tria Prima theme; Sulfur gives 2 stirs but Gold
+depends on using none; Salt uses immovable tiles (not a "preserve earth" objective); the
+chapter ends with a puzzle plate.
+
+Open questions, to settle when each stage is built:
+
+- **Multi-chapter display.** The header dots and the Chapter complete screen assume one
+  chapter. Proposed: chapters are a list of stage groups. The header shows the current
+  chapter's dots, and winning Chapter 1's last stage leads into Chapter 2 with Enter.
+- **How salt behaves.** Two options, to decide with a prototype: (a) salt holds its cell
+  with no gravity, so tiles above it stay above and the cells below refill only through
+  cascades from beside it; or (b) salt falls like any tile but can't be swapped or
+  matched, and only an unstable blast destroys it.
+- **Sulfur's points target and Silver threshold**, calibrated with stirs used and unused.
+
+Build order (*initial*): (1) multi-chapter structure plus Sulfur; (2) Mercury; (3) Salt;
+(4) The Philosopher's Plate.
+
+### Chapter 2 step 1 implemented: chapters and Sulfur, The Burning (2026-11-07)
+
+- **Chapters.** `adventure.CHAPTERS` is a tuple of `Chapter(number, title, kits)`;
+  `CAMPAIGN_KITS` stays the flat unlock order, so saved progress (an index) is unchanged.
+  `chapter_of(index)` gives a stage's chapter and its first index. The header shows the
+  current chapter's dots; `Session.chapter_complete` is true after a chapter's last
+  stage, whose screen lists that chapter's medals in two columns and, when the next
+  chapter is open, offers it with Enter. Chapter 1 finishers already had progress
+  recorded past The Red Plate, so The Burning opens for them.
+- **Stir-gated Gold.** `Experiment.gold_stirs`: Gold also needs at most that many stirs,
+  otherwise the run is graded on the silver threshold. Medals now take the stirs saved
+  with each score. Because the scoreboard still ranks by material, a stage's medal dot
+  is the best medal among its saved wins, not the top-ranked run's.
+- **The Burning** (`adventure-kit-burning-v1`): 20 of each element, 2 stirs, unstable
+  symbols, target 3,500, medals (40, 0) with `gold_stirs=0`, so Gold is any win without
+  stirring. Calibration on seed 42, 200 runs per policy:
+
+| Target | Policy | Wins | Wins with 0 / 1 / 2 stirs | Median material (wins) | Wins with 40+ |
+| --- | --- | --- | --- | --- | --- |
+| 3,000 | random | 153 | 19 / 57 / 77 | 47 | 119 |
+| 3,000 | efficient | 177 | 29 / 94 / 54 | 53 | 172 |
+| **3,500** | random | 67 | 4 / 28 / 35 | 36 | 27 |
+| **3,500** | efficient | 126 | 10 / 61 / 55 | 40 | 68 |
+| 4,000 | random | 25 | 1 / 8 / 16 | 31 | 4 |
+| 4,000 | efficient | 60 | 1 / 20 / 39 | 29 | 10 |
+
+  3,500 makes a win harder than in Chapter 1 (63% for the efficient policy against 99%
+  in The Dry Flask) while Silver stays reachable (34%). A no-stir win is rare for the
+  one-move-ahead policy (5%), which is the point: it rewards looking further ahead.
+
+### Chapter 2 step 2 implemented: Mercury, Quicksilver (2026-11-07)
+
+`Experiment.diagonal` gives a kit Diagonal mode's swaps and match directions with the
+four Adventure elements (no sun). The engine already handled unstable symbols on
+diagonals: a run of 5 in any direction forms a Line, which blasts along its run's
+direction, so a diagonal Line clears its diagonal. A Line set off by another blast still
+clears its row and column, and shapes still come only from straight runs. The click
+handler now checks adjacency with the game's own mode rather than the session's.
+
+Calibration on seed 42 (60 runs for points targets, 100 for detonations; 8 stirs):
+
+| Objective | Reserves | Policy | Wins | Wins with 30+ / 40+ / 50+ |
+| --- | --- | --- | --- | --- |
+| 3,500 points | 20 each | random / efficient | 60 / 60 of 60 | 59, 56, 47 / 60, 59, 53 |
+| 5,000 points | 20 each | random / efficient | 49 / 59 of 60 | 26, 20, 15 / 33, 13, 3 |
+| 6,500 points | 20 each | random / efficient | 13 / 9 of 60 | 8, 4, 3 / 3, 1, 0 |
+| Detonate 4 | 12 each | random / efficient | 16 / 96 | 2, 0, 0 / 68, 53, 28 |
+| **Detonate 5** | 12 each | random / efficient | **3 / 80** | 0, 0, 0 / **25, 9**, 1 |
+| Detonate 6 | 12 each | random / efficient | 1 / 51 | 0, 0, 0 / 6, 1, 1 |
+| Detonate 6 | 16 each | random / efficient | 4 / 76 | 0, 0, 0 / 41, 17, 3 |
+
+Diagonal cascades are so generous that with a points target the random policy matches
+or beats the efficient one on material: luck, not skill, decides. A detonation target
+separates them sharply. **Quicksilver** (`adventure-kit-quicksilver-v1`): detonate 5,
+12 of each element, 8 stirs, Silver 30 / Gold 40, the same shape as Chapter 1 (Silver
+for about a quarter of efficient runs, Gold for about a tenth).
+
+### Chapter 2 step 3 implemented: Salt, Fixation (2026-11-07)
+
+The player chose option (b): salt falls with gravity but can't be swapped or matched.
+`board.SALT` (-1) is a grid value that `matched_runs`, `legal_moves` and `Game.attempt`
+skip; gravity and refill treat it like any tile; blasts clear it. It isn't material
+(`material_left`, `consumed` and the insufficient-material check leave it out). A stir
+shuffles salt with everything else. Plates can place it with the letter `s`.
+
+**Removal rule changed after calibration.** Salt that only unstable blasts remove was
+nearly unwinnable: it sinks to the bottom, where few blasts reach, and it blocks moves,
+burning stirs. Seed 42, 100 runs, 8 stirs, 20 of each element:
+
+| Rule | Salt | Random wins | Efficient wins |
+| --- | --- | --- | --- |
+| Blasts only | 4 / 6 / 8 | 0 / 0 / 0 | 2 / 1 / 0 |
+| Any adjacent match | 6 / 8 | 99 / 95 | 100 / 98 |
+| Adjacent water match | 6 / 8 | 41 / 23 | 57 / 34 |
+
+The player chose **water dissolves salt** (`Experiment.dissolver`, an element index):
+a matched tile of that element dissolves orthogonally adjacent salt
+(`adventure.dissolved_salt`, added to the reaction's cells), and blasts still do. The
+new `DISSOLVE` objective wins when no salt is left.
+
+**Fixation** (`adventure-kit-fixation-v1`): 6 salt at (1,3) (6,3) (2,5) (5,5) (3,1) (4,6),
+20 of each element, 8 stirs, water dissolves. 200 runs per policy on seed 42:
+
+| Salt | Policy | Wins | Wins with 30+ / 40+ / 50+ / 60+ / 70+ |
+| --- | --- | --- | --- | --- |
+| **6** | random | 81 | 34 / 22 / 18 / 13 / 10 |
+| **6** | efficient | **117** | 70 / **59** / 53 / 41 / **28** |
+| 7 | random / efficient | 65 / 86 | efficient: 37 / 26 / 21 / 15 / 9 |
+| 8 | random / efficient | 45 / 69 | efficient: 26 / 11 / 4 / 1 / 0 |
+
+Material left is spread widely (a fast clear leaves most of the reserves), so the
+medals sit high: Silver 40 (30% of efficient runs), Gold 70 (14%).
+
+### Chapter 2 step 4 implemented: Quintessence, The Philosopher's Plate (2026-11-07)
+
+- **Two-element purify.** `Experiment.element` may be a tuple; `AdventureGame.purify_elements`
+  returns the targets and `element_name` joins them ("fire and water").
+- **Finale generator.** `tools/solve_plate.py --finale N [--salt K]` builds plates with
+  7 fire, 5-8 water, optional salt (water dissolves it), an Element symbol on a fire tile
+  and a Line and a Square on other tiles. It keeps plates that can't be won within 4
+  swaps, can be within 6, and can't be won without the Element symbol. 1,500 seeds gave
+  73 plain and 21 two-salt candidates. Ranked by one best line, every symbol required
+  and the size of the search:
+
+| Seed | Salt | Best | Positions | Needs | Salt dissolved |
+| --- | --- | --- | --- | --- | --- |
+| 1463 | 0 | 6 | 503 | Element, Line, Square | - |
+| **1112** | 2 | 6 | 722 | Element, Line, Square | 1 |
+| 366 | 2 | 6 | 1,999 | Element, Line | 2 |
+
+  The player chose **seed 1112** (`adventure-plate-philosophers-v1`): clear fire and
+  water, 8 swaps, Gold 6 / Silver 7. Every win is the one 6-swap line (a search to depth
+  8 finds no longer win), so in practice a solve is Gold, as with The Red Plate.
+- Fixes: a too-long sidebar title falls back to the experiment title alone; the chapter
+  medal list shows experiment titles; plate records say "fewest swaps".

@@ -10,14 +10,20 @@ Drop short `.wav` or `.ogg` files here, then restart the game. No code changes r
 | match.wav | Clear the first match |
 | cascade.wav | Clear each subsequent cascade |
 | plus.wav | Award a plus bonus (alongside match/cascade) |
-| unstable.wav | Form a new unstable symbol (Classic) |
+| unstable.wav | Form a new unstable symbol |
 | line_burst.wav | Detonate a Line unstable symbol |
 | square_burst.wav | Detonate a Square unstable symbol |
 | element_burst.wav | Detonate an Element unstable symbol |
+| dissolve.wav | A reaction dissolves salt (campaign) |
+| salt.wav | Click a salt tile, which can't be moved |
+| undo.wav | Undo a swap on a fixed plate |
 | hint.wav | Show a hint |
-| shuffle.wav | Automatically replace a dead board |
+| shuffle.wav | Automatically replace a dead board, or stir the vessel |
 | restart.wav | Start a new game with R or the button |
-| game_over.wav | Finish the last move, after all cascades |
+| game_over.wav | Finish the last move in Classic or Diagonal, after all cascades |
+| success.wav | Complete an Adventure experiment or campaign stage |
+| failure.wav | An Adventure experiment stalls |
+| chapter_complete.wav | Complete the last stage of a campaign chapter |
 
 Use brief clips; effects can overlap. `plus` plays once per clear even with multiple crosses. Without files, built-in tones play.
 

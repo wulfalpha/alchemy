@@ -9,6 +9,7 @@ SILVER_MATERIAL = 30
 GOLD_MATERIAL = 45
 V1_THRESHOLDS = (SILVER_MATERIAL, GOLD_MATERIAL)   # revisions without unstable symbols
 UNSTABLE_THRESHOLDS = (40, 50)                     # unstable symbols: calibrated 2026-11-05
+MEDAL_RANK = {'Bronze': 1, 'Silver': 2, 'Gold': 3}
 
 
 def efficiency_medal(material_left, thresholds=V1_THRESHOLDS):

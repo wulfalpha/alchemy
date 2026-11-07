@@ -19,6 +19,9 @@ UNSTABLE_POINTS = 50   # per tile cleared by a detonation, before the cascade mu
 # the board plus those banked when a dead board was replaced. Kept below what a typical
 # detonation earns, so using a symbol is always the better play.
 UNUSED_BONUS = {LINE: 100, SQUARE: 150, ELEMENT: 200}
+# Salt (campaign kits only): an inert tile that falls like any other but never matches
+# and can't be swapped. Only an unstable blast removes it.
+SALT = -1
 
 
 def matched_runs(grid, mode=None):
@@ -28,7 +31,7 @@ def matched_runs(grid, mode=None):
     for y in range(SIZE):
         for x in range(SIZE):
             value = grid[y][x]
-            if value is None:
+            if value is None or value == SALT:
                 continue
             for dx, dy in directions:
                 px, py = x - dx, y - dy
@@ -187,7 +190,7 @@ def legal_moves(grid, mode=None):
                 if not (0 <= b[0] < SIZE and 0 <= b[1] < SIZE):
                     continue
                 a = (x, y)
-                if grid[y][x] is None or grid[b[1]][b[0]] is None:
+                if grid[y][x] in (None, SALT) or grid[b[1]][b[0]] in (None, SALT):
                     continue
                 swap(grid, a, b)
                 if matches(grid, mode):
@@ -243,7 +246,7 @@ class Game:
             return False
         if any(not (0 <= x < SIZE and 0 <= y < SIZE) for x, y in (a, b)):
             return False
-        if self.grid[a[1]][a[0]] is None or self.grid[b[1]][b[0]] is None:
+        if self.grid[a[1]][a[0]] in (None, SALT) or self.grid[b[1]][b[0]] in (None, SALT):
             return False
         if not adjacent(a, b, self.mode):
             return False

@@ -104,7 +104,7 @@ Adventure scores shows earlier revisions separately: `adventure-first-v2` (befor
 unstable symbols) and the original `adventure-first-v1`, with unavailable
 efficiency statistics clearly labeled. The earlier launch name
 `--mode adventure-first-v1` still works. The initial target is for playtesting;
-campaign progression and reactant recovery are future work.
+reactant recovery is future work.
 
 ### Adventure difficulty
 
@@ -170,10 +170,40 @@ two unstable symbols. Its medals grade swaps used, and its scoreboard ranks by f
 swaps. Press **U** to undo a swap (as often as you like, even after running out of
 swaps); since the plate never changes, undoing simply gives the swap back.
 
-These four stages form **Chapter 1: The Great Work**; later chapters will add more. Stages unlock in order and your progress is saved
+These four stages form **Chapter 1: The Great Work**. **Chapter 2: The Tria Prima**
+follows the three principles of alchemy, Sulfur, Mercury and Salt, and ends on a new
+plate:
+
+| Stage | Experiment | Goal | Kit | Stirs | Silver / Gold |
+| --- | --- | --- | --- | --- | --- |
+| 5. Sulfur | The Burning | Reach 3,500 points | Reserves of 20 of each element | **2** | 40 material / **win without stirring** |
+| 6. Mercury | Quicksilver | Detonate 5 unstable symbols | Reserves of 12 of each element; **swaps and matches run diagonally too** | 8 | 30 / 40 |
+| 7. Salt | Fixation | Dissolve all 6 salt tiles | Reserves of 20 of each element; **6 salt tiles** on the board | 8 | 40 / 70 |
+| 8. Quintessence | The Philosopher's Plate | Clear every **fire and water** tile within **8 swaps** | A fixed plate with 2 salt tiles and an **Element**, a Line and a Square symbol; no reserves | none | Gold in 6 swaps, Silver in 7 |
+
+The Burning's Gold ignores material: any win that never stirs earns it, so look ahead
+at what each swap leaves behind. Running out of moves with both stirs spent ends the run.
+
+Quicksilver plays like [Diagonal](#game-modes): swap any touching symbols, diagonals
+included, and lines of 4 count in every direction. A diagonal run of 5 forms a Line
+symbol, which blasts along its diagonal when matched. L, T and plus shapes still come
+only from straight rows and columns.
+
+Salt is inert: it falls like any tile but can't be swapped or matched, and it isn't
+material. Salt dissolves in water: a water match beside a salt tile (above, below or
+to the side) dissolves it, and any unstable blast that reaches it does too. A stir
+shuffles salt along with everything else.
+
+The Philosopher's Plate brings the chapter together. The solver proves it has exactly
+one 6-swap solution, which needs all three of its symbols and dissolves a salt tile on
+the way; it can't be won without the Element blast. As on The Red Plate, **U** undoes
+a swap.
+
+Stages unlock in order and your progress is saved
 locally with your scores. Winning a stage shows **Stage complete**: press **Enter** (or
-click the board) to begin the next one. Finishing the last stage shows **Chapter 1
-complete** with your best medal for each stage. The header shows one dot per stage,
+click the board) to begin the next one. Finishing a chapter's last stage shows
+**Chapter complete** with your best medal for each of its stages, and Enter begins the
+next chapter. The header shows the current chapter and one dot per stage of it,
 filled with the colour of your best medal once won, with the current stage ringed. Press
 **E** at any time to replay an open stage for a better medal (it asks before abandoning
 a game in progress). The campaign opens on the newest stage you have reached. Unstable
@@ -215,7 +245,7 @@ Diagonal mode. Seeded and unseeded results remain separate. Nothing is rewritten
 
 ## Sounds
 
-Every event has a built-in metal or glass tone (bells, clanks, clinking vials), synthesised at startup, so the game has sound straight after `pip install`. To replace any of them, drop WAV or OGG effects into `sounds/` (or a folder given with `--sound-dir`) using the filenames in [sounds/README.md](https://github.com/wulfalpha/alchemy/blob/main/sounds/README.md), then restart. A file always takes priority over its tone, so you can replace them one at a time. Press **M** to mute, use `--volume 0.4` to adjust volume, or `--no-tones` to hear only your own files. Missing audio files or devices do not prevent play.
+Every event has a built-in tone (bells, clanks, clinking vials, thumping blasts, fizzing salt), synthesised at startup, so the game has sound straight after `pip install`. To replace any of them, drop WAV or OGG effects into `sounds/` (or a folder given with `--sound-dir`) using the filenames in [sounds/README.md](https://github.com/wulfalpha/alchemy/blob/main/sounds/README.md), then restart. A file always takes priority over its tone, so you can replace them one at a time. Press **M** to mute, use `--volume 0.4` to adjust volume, or `--no-tones` to hear only your own files. Missing audio files or devices do not prevent play.
 
 ## Artwork
 

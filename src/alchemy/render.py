@@ -9,9 +9,9 @@ import logging
 import math
 
 import pygame
-from .board import SIZE
+from .board import SALT, SIZE
 from .modes import ADVENTURE_MODES
-from .adventure import CAMPAIGN_KITS, CHAPTER, CHAPTER_TITLE, saved_medal
+from .adventure import saved_medal
 
 WIDTH, HEIGHT = 1040, 780
 LEFT, TOP, TILE = 48, 154, 70
@@ -21,6 +21,7 @@ BG = (15, 24, 30)
 TEXT = (241, 229, 203)
 MUTED = (156, 173, 174)
 GOLD = (223, 181, 103)
+SALT_COLOR, SALT_INK = (176, 170, 152), (60, 56, 48)
 MEDAL_COLORS = {'Bronze': (205, 154, 111), 'Silver': (195, 209, 220), 'Gold': GOLD}
 UNSTABLE = (255, 196, 110)
 SURFACE = (35, 49, 55)
@@ -109,6 +110,9 @@ class ClassicView:
     score_row_height = 33
     tab_hint = 'Tab: current and legacy scoring'
     record_status = 'New local high score!'
+
+    def record_text(self, game):
+        return self.record_status
     ranking_note = ''
 
     def score_columns(self, canvas):
@@ -125,8 +129,12 @@ class AdventureView:
         if game.experiment.medal_by == 'swaps':
             silver, gold = game.experiment.medals
             return (str(game.swaps_remaining), 'SWAPS LEFT', f'Gold in {gold} / Silver in {silver}')
-        return (str(game.material_left), 'MATERIAL LEFT',
-                'Silver {}+ / Gold {}+'.format(*game.experiment.medals))
+        silver, gold = game.experiment.medals
+        if game.experiment.gold_stirs == 0:
+            goal = f'Silver {silver}+ / Gold: no stirs' if gold == 0 else f'Silver {silver}+ / Gold {gold}+, no stirs'
+        else:
+            goal = f'Silver {silver}+ / Gold {gold}+'
+        return str(game.material_left), 'MATERIAL LEFT', goal
 
     def panel(self, canvas, session):
         game = session.game
@@ -134,8 +142,10 @@ class AdventureView:
         title = f'{kit.stage}: {game.experiment.title}' if kit else game.experiment.title
         if canvas.fonts[24].size(title)[0] <= PANEL_WIDTH:
             canvas.text(title, (PANEL, 305), 24)
-        else:
+        elif canvas.fonts[20].size(title)[0] <= PANEL_WIDTH:
             canvas.text(title, (PANEL, 308), 20)
+        else:                                       # too long even smaller: the title alone
+            canvas.text(canvas.fit(game.experiment.title, PANEL_WIDTH, 24), (PANEL, 305), 24)
         canvas.text(game.objective_title, (PANEL, 341), 19, GOLD)
         canvas.text(game.objective_progress, (PANEL, 366), 14, MUTED)
         if game.experiment.layout:
@@ -145,7 +155,10 @@ class AdventureView:
             canvas.text('U: undo a swap   R: start over', (PANEL, 478), 14, MUTED if game.can_undo else RULE)
             return
         if sum(game.reserves):
-            canvas.text('Replacement reserves', (PANEL, 390), 14, MUTED)
+            label = 'Replacement reserves'
+            if game.experiment.diagonal:
+                label += '   /   swap and match diagonally'
+            canvas.text(label, (PANEL, 390), 14, MUTED)
         else:
             canvas.text('Reserves exhausted', (PANEL, 387), 14, GOLD)
             canvas.text('Use the remaining board.' if not game.finished else 'No reserves remain.',
@@ -192,6 +205,9 @@ class AdventureView:
     score_row_height = 34
     tab_hint = 'Tab: current and original experiment'
     record_status = 'New local best: most material left!'
+
+    def record_text(self, game):
+        return 'New local best: fewest swaps!' if game.experiment.medal_by == 'swaps' else self.record_status
     ranking_note = '  /  ranked by material left, then fewest swaps'
 
     def score_columns(self, canvas):
@@ -202,7 +218,8 @@ class AdventureView:
             canvas.text('-', (440, y), 16, MUTED)
             canvas.text('Efficiency stats unavailable', (108, y+19), 14, MUTED)
         else:
-            medal = saved_medal(category.mode if category else None, entry['material_left'], entry['swaps'])
+            medal = saved_medal(category.mode if category else None, entry['material_left'], entry['swaps'],
+                                entry['stirs'])
             canvas.text(f"{entry['material_left']} / {medal}", (440, y), 16, MEDAL_COLORS[medal])
             canvas.text(f"Swaps: {entry['swaps']} / Stirs: {entry['stirs']}", (108, y+19), 14, MUTED)
 
@@ -248,13 +265,14 @@ def draw_header(canvas, session):
 
 
 def draw_progress(canvas, session):
-    """Campaign header: the chapter, one dot per stage (medal colour once won), and the
-    current stage ringed."""
-    canvas.text(CHAPTER, (PANEL, 67), 16, MUTED)
-    x = PANEL + canvas.fonts[16].size(CHAPTER)[0] + 18
+    """Campaign header: the chapter, one dot per stage of it (medal colour once won), and
+    the current stage ringed."""
+    chapter, first = session.chapter()
+    canvas.text(chapter.name, (PANEL, 67), 16, MUTED)
+    x = PANEL + canvas.fonts[16].size(chapter.name)[0] + 18
     open_stages = session.unlocked_kits()
-    for index in range(len(CAMPAIGN_KITS)):
-        centre = (x + index*24, 78)
+    for index in range(first, first + len(chapter.kits)):
+        centre = (x + (index - first)*24, 78)
         medal = session.stage_medals[index] if index < len(session.stage_medals) else None
         if medal:
             pygame.draw.circle(canvas.screen, MEDAL_COLORS[medal], centre, 6)
@@ -263,7 +281,7 @@ def draw_progress(canvas, session):
         if index == session.kit_index:
             pygame.draw.circle(canvas.screen, GOLD, centre, 10, 1)
     hint = 'E: switch stage' if open_stages > 1 else 'Win to open the next stage'
-    canvas.text(hint, (x + len(CAMPAIGN_KITS)*24 + 6, 67), 14, MUTED)
+    canvas.text(hint, (x + len(chapter.kits)*24 + 6, 67), 14, MUTED)
 
 
 def draw_board(canvas, session):
@@ -279,6 +297,9 @@ def draw_board(canvas, session):
             pending = (x, y) in game.pending
             dx, dy = motion.offset(x, y, now)
             rect = pygame.Rect(LEFT+(x+dx)*TILE+3, TOP+(y+dy)*TILE+3, TILE-6, TILE-6)
+            if value == SALT:
+                draw_salt(canvas, rect, pending)
+                continue
             pygame.draw.rect(screen, session.mode.colors[value], rect, border_radius=10)
             pygame.draw.rect(screen, (255, 226, 154) if pending else (104, 107, 99), rect, 1, border_radius=10)
             symbol = session.symbols[value]
@@ -298,6 +319,18 @@ def draw_board(canvas, session):
         cell = pygame.Rect(LEFT+x*TILE+3, TOP+y*TILE+3, TILE-6, TILE-6)
         pygame.draw.rect(screen, TEXT, cell.inflate(10, 10), 2, border_radius=14)
     screen.set_clip(None)
+
+
+def draw_salt(canvas, rect, pending):
+    """Salt: a pale stone tile with the alchemical sign for salt (a circle cut by a bar)."""
+    screen = canvas.screen
+    pygame.draw.rect(screen, SALT_COLOR, rect, border_radius=10)
+    pygame.draw.rect(screen, (255, 226, 154) if pending else (150, 146, 132), rect, 2, border_radius=10)
+    radius = rect.width // 2 - 14
+    pygame.draw.circle(screen, SALT_INK, rect.center, radius, 3)
+    pygame.draw.line(screen, SALT_INK, (rect.centerx - radius, rect.centery), (rect.centerx + radius - 1, rect.centery), 3)
+    if pending:
+        canvas.shade(rect, (255, 234, 173, 95))
 
 
 def draw_unstable(screen, rect, tier, now, reduced_motion):
@@ -361,7 +394,8 @@ def draw_end_screen(canvas, session, view):
     game = session.game
     canvas.shade(BOARD, (9, 17, 24, 225))
     if session.chapter_complete:
-        canvas.text(f'{CHAPTER} complete: {CHAPTER_TITLE}', (110, 320), 24, GOLD)
+        chapter, _ = session.chapter()
+        canvas.text(f'{chapter.name} complete: {chapter.title}', (110, 320), 24, GOLD)
     elif session.stage_won:
         canvas.text(f'Stage complete: {session.kit.stage}', (110, 320), 24, GOLD)
     else:
@@ -369,7 +403,7 @@ def draw_end_screen(canvas, session, view):
     canvas.text(f'{game.score:,} points', (150, 370), 38, GOLD)
     status = 'Score saved locally' if session.score_saved else 'Score could not be saved'
     if session.score_saved and session.results and session.results[0]['id'] == session.run_id:
-        status = view.record_status
+        status = view.record_text(game)
     canvas.text(view.end_status(game, status), (110, 425), 16, GOLD)
     view.end_details(canvas, game)
     if session.stage_won:
@@ -377,20 +411,27 @@ def draw_end_screen(canvas, session, view):
 
 
 def draw_stage_complete(canvas, session):
-    """Campaign win: offer the next stage, or sum up the chapter after its last stage."""
-    if session.next_kit:
-        following = session.next_kit
-        pygame.draw.rect(canvas.screen, SURFACE, NEXT_STAGE_BOX, border_radius=8)
-        canvas.text(f'Enter: next stage, {following.stage}: {following.experiment.title}',
-                    (NEXT_STAGE_BOX.x + 14, NEXT_STAGE_BOX.y + 11), 16, GOLD)
-        canvas.text('E: replay any open stage for a better medal', (122, 640), 14, MUTED)
-    elif session.chapter_complete:
-        for index, kit in enumerate(CAMPAIGN_KITS):
+    """Campaign win: offer the next stage; after a chapter's last stage, first list the
+    chapter's medals (two columns) and offer the next chapter if it is open."""
+    following, box = session.next_kit, NEXT_STAGE_BOX
+    if session.chapter_complete:
+        chapter, first = session.chapter()
+        for offset, kit in enumerate(chapter.kits):
+            index = first + offset
             medal = session.stage_medals[index] if index < len(session.stage_medals) else None
-            canvas.text(f'{kit.stage}: {kit.experiment.title}', (122, 584 + index*22), 14)
-            canvas.text(medal or '-', (420, 584 + index*22), 14, MEDAL_COLORS.get(medal, MUTED))
-        canvas.text('More chapters are coming.  E: replay a stage', (122, 584 + len(CAMPAIGN_KITS)*22 + 8),
-                    14, MUTED)
+            x, y = 122 + (offset % 2)*236, 584 + (offset // 2)*22
+            canvas.text(canvas.fit(kit.experiment.title, 186, 14), (x, y), 14)
+            canvas.text(medal or '-', (x + 190, y), 14, MEDAL_COLORS.get(medal, MUTED))
+        box = box.move(0, ((len(chapter.kits) + 1) // 2)*22 + 6)
+        if not following:
+            canvas.text('More chapters are coming.  E: replay a stage', (122, box.y + 8), 14, MUTED)
+            return
+    if following:
+        label = 'next chapter' if session.chapter_complete else 'next stage'
+        pygame.draw.rect(canvas.screen, SURFACE, box, border_radius=8)
+        canvas.text(canvas.fit(f'Enter: {label}, {following.stage}: {following.experiment.title}', box.w - 28),
+                    (box.x + 14, box.y + 11), 16, GOLD)
+        canvas.text('E: replay any open stage for a better medal', (122, box.bottom + 14), 14, MUTED)
 
 
 def draw_scoreboard(canvas, session, view):

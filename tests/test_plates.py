@@ -139,3 +139,15 @@ def test_undo_is_only_for_fixed_plates():
     assert game.attempt(*legal_moves(game.grid, game.mode)[0])
     settle(game)
     assert not game.history and not game.undo()
+
+
+# ---------- two-element plates ----------
+
+def test_a_plate_can_require_clearing_two_elements():
+    layout = (EMPTY,) * 5 + ('...w....', '.wwaw...', 'fffaf...')
+    game = AdventureGame(experiment=replace(PLATE, layout=layout, element=(0, 1), swap_limit=5))
+    assert game.purify_elements == (0, 1) and game.element_name == 'fire and water'
+    assert game.element_left == 8 and 'fire and water' in game.objective_title
+    assert game.attempt((3, 7), (4, 7))                  # four fire; water is still left
+    settle(game)
+    assert game.outcome != 'success' and game.element_left == 4
