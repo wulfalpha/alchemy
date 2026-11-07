@@ -167,7 +167,8 @@ The Red Plate is a puzzle: the same board every time, nothing refills, and there
 stirs, so every swap is a choice. A solver (`tools/solve_plate.py`) proves it can be
 won, finds the fewest swaps (5, by one line), and confirms it can't be won without its
 two unstable symbols. Its medals grade swaps used, and its scoreboard ranks by fewest
-swaps.
+swaps. Press **U** to undo a swap (as often as you like, even after running out of
+swaps); since the plate never changes, undoing simply gives the swap back.
 
 These four stages form **Chapter 1: The Great Work**; later chapters will add more. Stages unlock in order and your progress is saved
 locally with your scores. Winning a stage shows **Stage complete**: press **Enter** (or

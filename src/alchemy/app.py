@@ -241,6 +241,16 @@ class Session:
     def game_over_visible(self):
         return self.game.finished and not self.game.pending and not self.motion.active(self.motion_time)
 
+    def undo(self):
+        """U on a fixed plate: take back the last swap."""
+        if not self.game.experiment.layout or self.motion.active(self.motion_time):
+            return
+        if self.game.undo():
+            self.selected = self.hint = None
+            self.audio.play('restart')
+        elif not self.game.history:
+            self.game.message = 'Nothing to undo.'
+
     def show_hint(self):
         self.hint = self.game.hint()
         self.audio.play('hint')
@@ -327,6 +337,8 @@ class Session:
             self.audio.toggle()
         elif event.key == pygame.K_r:
             self.confirm('restart', confirming, self.restart)
+        elif event.key == pygame.K_u and self.adventure:
+            self.undo()
         elif event.key == pygame.K_h and self.can_act():
             self.show_hint()
 

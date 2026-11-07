@@ -142,6 +142,7 @@ class AdventureView:
             canvas.text('A fixed plate: no reserves, no stirs', (PANEL, 390), 14, MUTED)
             canvas.text(f'Material left: {game.material_left}', (PANEL, 429), 16)
             canvas.text(f'Swaps: {game.turns} of {game.experiment.swap_limit}', (PANEL, 454), 16)
+            canvas.text('U: undo a swap   R: start over', (PANEL, 478), 14, MUTED if game.can_undo else RULE)
             return
         if sum(game.reserves):
             canvas.text('Replacement reserves', (PANEL, 390), 14, MUTED)
@@ -175,12 +176,17 @@ class AdventureView:
             canvas.text(f'{game.medal} medal / Material left: {game.material_left}',
                         (122, 452), 16, MEDAL_COLORS[game.medal])
         canvas.text(f'Reactants consumed: {game.consumed}', (122, 478), 16)
-        canvas.text(f'Successful swaps: {game.turns} / Stirs: {game.stirs}', (122, 504), 16)
+        swaps = (f'Swaps: {game.turns} of {game.experiment.swap_limit}' if game.experiment.layout
+                 else f'Successful swaps: {game.turns} / Stirs: {game.stirs}')
+        canvas.text(swaps, (122, 504), 16)
         unspent = len(game.unstable)
         if game.outcome == 'success' and unspent and not game.experiment.layout:
             canvas.text(f"{unspent} unstable symbol{'s' if unspent != 1 else ''} left unspent "
                         '(counted in material left)', (122, 526), 14, MUTED)
-        canvas.text('L: view scores    R: retry experiment', (122, 548), 16)
+        controls = 'L: view scores    R: retry experiment'
+        if game.experiment.layout and game.can_undo:
+            controls = 'L: view scores    R: start over    U: undo last swap'
+        canvas.text(controls, (122, 548), 16)
 
     note_color = MUTED
     score_row_height = 34

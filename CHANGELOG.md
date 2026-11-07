@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Campaign
+- **Undo on fixed plates.** Press **U** on The Red Plate to take back the last swap,
+  as many times as you like, including after running out of swaps. Undo gives the swap
+  back, so medals count the swaps in your final solution. Not available after a win.
+
 ## 0.1.11
 
 ### Campaign
