@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.11
 
 ### Campaign
 - **New Campaign mode** (`--mode campaign`, or **C**): hand-designed Adventure
