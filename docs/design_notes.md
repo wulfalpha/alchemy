@@ -913,3 +913,35 @@ mode, and experiment), and undo restores it, swap count included. Undo is free b
 R already replays the deterministic plate with no penalty; it only saves replaying from
 the start. It works after a stall (no swaps left, blocked plate) but not after a win,
 whose score is already saved. Other Adventure kits refill randomly, so they have no undo.
+
+## Campaign Chapter 2, The Tria Prima: proposed design (2026-11-07)
+
+Chapter 2 follows the three principles of alchemy (Sulfur, Mercury, Salt) and ends on a
+fixed plate, as Chapter 1 does. It opens once The Red Plate is won. Each stage brings in
+one new idea. Numbers marked *initial* are to be calibrated on seed 42 (kits) or with
+`tools/solve_plate.py` (the plate).
+
+| # | Stage | Rule | Teaches | Engine work |
+| --- | --- | --- | --- | --- |
+| 1 | **Sulfur: The Burning** | Points target with only **2 stirs**. Gold requires winning with **no stirs**; Silver and Bronze are graded on material as usual | Look ahead at what each swap leaves behind | A stir condition on the Gold medal |
+| 2 | **Mercury: Quicksilver** | Diagonal swaps and matches with unstable symbols switched on | Diagonal play | Each kit chooses its mode; unstable symbols in Diagonal |
+| 3 | **Salt: Fixation** | **Immovable salt tiles** on the board | Working around fixed obstacles | Salt tiles: cannot be swapped or matched |
+| 4 | **The Philosopher's Plate** | Fixed plate that clears two elements and can only be solved with an Element blast | Bringing everything together | Plates with more than one target element |
+
+Decisions (player, 2026-11-07): the Tria Prima theme; Sulfur gives 2 stirs but Gold
+depends on using none; Salt uses immovable tiles (not a "preserve earth" objective); the
+chapter ends with a puzzle plate.
+
+Open questions, to settle when each stage is built:
+
+- **Multi-chapter display.** The header dots and the Chapter complete screen assume one
+  chapter. Proposed: chapters are a list of stage groups. The header shows the current
+  chapter's dots, and winning Chapter 1's last stage leads into Chapter 2 with Enter.
+- **How salt behaves.** Proposed: salt holds its cell (no gravity) and tiles fall through
+  the column around it is not possible, so the cells below a salt tile refill only from
+  the sides; or salt falls like any tile but can't be swapped or matched and is destroyed
+  only by unstable blasts. To decide with a prototype.
+- **Sulfur's points target and Silver threshold**, calibrated with stirs used and unused.
+
+Build order (*initial*): (1) multi-chapter structure plus Sulfur; (2) Mercury; (3) Salt;
+(4) The Philosopher's Plate.
