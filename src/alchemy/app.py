@@ -7,8 +7,7 @@ from pathlib import Path
 os.environ.setdefault('PYGAME_HIDE_SUPPORT_PROMPT', '1')
 import pygame
 from .board import Game, SIZE, adjacent
-from .adventure import AdventureGame, EXPERIMENTS, CAMPAIGN_KITS, CHAPTER
-from .medals import efficiency_medal
+from .adventure import AdventureGame, EXPERIMENTS, CAMPAIGN_KITS, CHAPTER, experiment_medal
 from .resources import load_symbols
 from .audio import Audio
 from .scores import Scoreboard, score_categories
@@ -157,7 +156,7 @@ class Session:
         experiment = kit.experiment
         seed = experiment.seed if self.args.seed is None else self.args.seed
         best = self.scores.top(seed, mode=experiment.key, rules=self.mode.rules)
-        return efficiency_medal(best[0]['material_left'], experiment.medals) if best else None
+        return experiment_medal(experiment, best[0]['material_left'], best[0]['swaps']) if best else None
 
     @property
     def stage_won(self):

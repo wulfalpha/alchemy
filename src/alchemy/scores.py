@@ -27,7 +27,13 @@ EFFICIENCY_ORDER = ('material_left IS NULL, material_left DESC, swaps ASC, '
                     'score DESC, completed ASC, id ASC')
 
 
+# Fixed plates (keys containing '-plate-') are puzzles: fewest swaps wins.
+SWAPS_ORDER = 'swaps IS NULL, swaps ASC, score DESC, completed ASC, id ASC'
+
+
 def ranking_order(mode):
+    if mode.startswith('adventure-') and '-plate-' in mode:
+        return SWAPS_ORDER
     return EFFICIENCY_ORDER if mode.startswith('adventure-') else POINTS_ORDER
 
 

@@ -13,9 +13,13 @@
   save its blast until the earth reserve is spent. 8 stirs; Silver 30, Gold 40.
 - **Stage 3, Citrinitas: The Golden Shape.** Win by detonating 3 unstable symbols of
   any kind, with reserves of 12 of each element. 8 stirs; Silver 40, Gold 50.
+- **Stage 4, Rubedo: The Red Plate.** A fixed puzzle board: clear every fire tile
+  within 7 swaps, with no reserves and no stirs. A Line and a Square symbol are already
+  on the plate, and you will need both. Gold for 5 swaps (the proven minimum), Silver
+  for 6. Its scoreboard ranks by fewest swaps.
 - Campaign experiments can have goals other than points; the sidebar and end screen
   show the goal and your progress.
-- **Progression.** The three stages form Chapter 1: The Great Work. Winning a stage
+- **Progression.** The four stages form Chapter 1: The Great Work. Winning a stage
   shows **Stage complete** and **Enter** (or a click) begins the next; the last stage
   shows **Chapter 1 complete** with your best medal per stage. The header shows a dot
   per stage in its best medal's colour. **E** replays any open stage.

@@ -2,9 +2,9 @@
 from collections import Counter
 from dataclasses import dataclass, replace
 
-from .board import ELEMENT, Game, SIZE, matches, legal_moves
+from .board import ELEMENT, LINE, SQUARE, Game, SIZE, matches, legal_moves
 from .modes import ADVENTURE
-from .medals import efficiency_medal, V1_THRESHOLDS, UNSTABLE_THRESHOLDS
+from .medals import efficiency_medal, swap_medal, V1_THRESHOLDS, UNSTABLE_THRESHOLDS
 
 
 # Objectives: reach the points target, remove every tile of one element (`element`, an
@@ -28,6 +28,15 @@ class Experiment:
     element: int | None = None      # the element a PURIFY objective removes
     detonations: int = 1            # unstable symbols a DETONATE objective needs
     start_unstable: tuple = ()      # (element, tier) symbols placed on the opening board
+    # A fixed plate: the opening board as rows of letters (the first letter of each
+    # element name, '.' for empty), unstable symbols as ((x, y), tier) pairs, and a swap
+    # limit. A plate has no stirs. Medals grade swaps used (`medal_by='swaps'`, with
+    # `medals` as the most swaps for Silver and Gold); plate keys contain '-plate-' so
+    # the scoreboard ranks them by fewest swaps.
+    layout: tuple = ()
+    marks: tuple = ()
+    swap_limit: int | None = None
+    medal_by: str = 'material'
 
 
 # Released definitions stay unchanged so their saved scores keep their meaning.
@@ -77,6 +86,15 @@ CAMPAIGN_KITS = (
                                  reserves=(12, 12, 12, 12), seed=42, stir_limit=8, unstable=True,
                                  medals=(40, 50), objective=DETONATE, detonations=3),
         'Form and detonate 3 unstable symbols.'),
+    # A fixed plate found by tools/solve_plate.py (generator seed 463): the fewest swaps
+    # that win is 5, by one line, and it cannot be won without its two symbols.
+    Kit('Rubedo', Experiment(key='adventure-plate-red-v1', title='The Red Plate', reserves=(0, 0, 0, 0),
+                             unstable=True, objective=PURIFY, element=0, swap_limit=7, medal_by='swaps',
+                             medals=(6, 5),
+                             layout=('......aw', '.a..feew', '.e.fffwa', 'eweeawaw',
+                                     'awffewwa', 'eewwwawe', 'ewawewaf', 'fewwaawa'),
+                             marks=(((4, 6), LINE), ((3, 5), SQUARE))),
+        'Clear every fire tile. Every swap counts.'),
 )
 _BY_KEY = {e.key: e for e in (*PREVIOUS_EXPERIMENTS.values(), *EXPERIMENTS.values(),
                               *(kit.experiment for kit in CAMPAIGN_KITS))}
@@ -86,6 +104,27 @@ def medal_thresholds(experiment_key):
     """(silver, gold) for a saved experiment revision; unknown and older keys use v1."""
     experiment = _BY_KEY.get(experiment_key)
     return experiment.medals if experiment else V1_THRESHOLDS
+
+
+def experiment_medal(experiment, material_left, swaps):
+    """The medal a successful run of `experiment` earns."""
+    if experiment.medal_by == 'swaps':
+        return swap_medal(swaps, experiment.medals)
+    return efficiency_medal(material_left, experiment.medals)
+
+
+def saved_medal(experiment_key, material_left, swaps):
+    """The medal of a saved win; unknown and older keys grade material with v1 thresholds."""
+    experiment = _BY_KEY.get(experiment_key)
+    if experiment is None:
+        return efficiency_medal(material_left)
+    return experiment_medal(experiment, material_left, swaps)
+
+
+def parse_layout(rows, names):
+    """Rows of letters (first letter of each element name; '.' empty) as a grid."""
+    letters = {name[0]: index for index, name in enumerate(names)}
+    return [[None if ch == '.' else letters[ch] for ch in row] for row in rows]
 
 
 def finite_refill(grid, cleared, reserves, rng):
@@ -218,9 +257,12 @@ class AdventureGame(Game):
         self.consumed = 0
         self.turns = 0
         self.stirs = 0
-        self.initial_material = SIZE*SIZE + sum(self.reserves)
+        if experiment.layout:
+            self.grid = parse_layout(experiment.layout, self.mode.names)
+            self.unstable = dict(experiment.marks)
         if experiment.start_unstable:
             self.unstable = carry_markers(experiment.start_unstable, self.grid, self.rng)
+        self.initial_material = self.material_left
         self.message = f'{experiment.title}: {self.goal}.'
 
     @property
@@ -255,7 +297,8 @@ class AdventureGame(Game):
     def objective_progress(self):
         objective = self.experiment.objective
         if objective == PURIFY:
-            return f'{self.element_left} {self.element_name} left, board and reserve'
+            where = 'on the plate' if self.experiment.layout else 'board and reserve'
+            return f'{self.element_left} {self.element_name} left, {where}'
         if objective == DETONATE:
             done = f'{min(self.detonations, self.experiment.detonations)} of {self.experiment.detonations} detonated'
             return f'{done}; match a symbol to set it off' if self.unstable else \
@@ -286,7 +329,7 @@ class AdventureGame(Game):
 
     @property
     def medal(self):
-        return (efficiency_medal(self.material_left, self.experiment.medals)
+        return (experiment_medal(self.experiment, self.material_left, self.turns)
                 if self.outcome == 'success' else None)
 
     @property
@@ -299,12 +342,21 @@ class AdventureGame(Game):
             return 'Too few of each element for another match.'
         if self.failure_reason == 'stirs_exhausted':
             return 'No stirs left to rearrange the vessel.'
+        if self.failure_reason == 'swaps_exhausted':
+            return 'No swaps left.'
+        if self.failure_reason == 'plate_blocked':
+            return 'No reaction is left on the plate.'
         return 'Stir could not find a playable arrangement.'
 
     @property
     def stirs_remaining(self):
         limit = self.experiment.stir_limit
         return None if limit is None else max(0, limit-self.stirs)
+
+    @property
+    def swaps_remaining(self):
+        limit = self.experiment.swap_limit
+        return None if limit is None else max(0, limit-self.turns)
 
     @property
     def material_left(self):
@@ -330,10 +382,17 @@ class AdventureGame(Game):
                 self.message = f'Experiment complete: the vessel is free of {self.element_name}!'
             elif self.experiment.objective == DETONATE:
                 self.message = 'Experiment complete: the symbols are spent!'
+        elif self.swaps_remaining == 0:
+            self.outcome = 'stalled'
+            self.failure_reason = 'swaps_exhausted'
+            self.message = f'{self.failure_summary} {self.shortfall}.'
         elif not legal_moves(self.grid, self.mode):
             markers = [(self.grid[y][x], tier) for (x, y), tier in sorted(self.unstable.items())]
             counts = Counter(v for row in self.grid for v in row if v is not None)
-            if max(counts.values(), default=0) < 4:
+            if self.experiment.layout:                 # a fixed plate is never stirred
+                self.outcome = 'stalled'
+                self.failure_reason = 'plate_blocked'
+            elif max(counts.values(), default=0) < 4:
                 self.outcome = 'stalled'
                 self.failure_reason = 'insufficient_material'
             elif self.stirs_remaining == 0:

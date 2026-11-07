@@ -1,4 +1,5 @@
 """The campaign: authored kits that unlock in order, with progress saved locally."""
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pygame
@@ -49,10 +50,15 @@ def test_kits_are_distinct_efficiency_ranked_experiments_with_their_own_medals()
     for kit in CAMPAIGN_KITS:
         experiment = kit.experiment
         assert experiment.key not in others
-        assert ranking_order(experiment.key).startswith('material_left')
         assert medal_thresholds(experiment.key) == experiment.medals
-        assert experiment.unstable and experiment.stir_limit
-        assert kit.stage and kit.lesson
+        assert experiment.unstable and kit.stage and kit.lesson
+        if experiment.layout:                      # a fixed plate: a swap-limited puzzle
+            assert ranking_order(experiment.key).startswith('swaps')
+            assert experiment.swap_limit and experiment.medal_by == 'swaps'
+            assert experiment.reserves == (0, 0, 0, 0)
+        else:
+            assert ranking_order(experiment.key).startswith('material_left')
+            assert experiment.stir_limit and experiment.medal_by == 'material'
 
 
 def test_the_dry_flask_is_scarce_in_water_only():
@@ -92,6 +98,20 @@ def test_every_stage_starts_and_draws(tmp_path):
         draw(canvas, s)
         s.game.outcome, s.game.failure_reason = 'stalled', 'stirs_exhausted'
         draw(canvas, s)
+
+
+def test_the_red_plate_is_proven_solvable_and_needs_its_symbols():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
+    from solve_plate import solve
+    kit = CAMPAIGN_KITS[3]
+    plate = kit.experiment
+    assert kit.stage == 'Rubedo' and plate.objective == PURIFY and plate.element == 0
+    best, lines, _ = solve(plate)
+    silver, gold = plate.medals
+    assert best == gold == 5 and silver == 6 and plate.swap_limit == 7 and len(lines) == 1
+    assert solve(replace(plate, marks=()))[0] is None
 
 
 def test_campaign_is_an_adventure_mode():
