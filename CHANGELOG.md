@@ -11,6 +11,9 @@
 - **Stage 6, Mercury: Quicksilver.** Detonate 5 unstable symbols with 12 of each
   element and 8 stirs, swapping and matching **diagonally** as well as straight. A Line
   symbol made in a diagonal run blasts along that diagonal. Silver 30, Gold 40.
+- **Stage 7, Salt: Fixation.** Six **salt** tiles sit on the board: they fall but can't
+  be swapped or matched. Salt dissolves in water: match water beside it, or blast it with
+  an unstable symbol. Dissolve all six; 20 of each element, 8 stirs. Silver 40, Gold 70.
 - A stage's medal dot shows its best medal, even when that is not the top-ranked run
   (a no-stir Gold can leave less material than a stirred Silver).
 

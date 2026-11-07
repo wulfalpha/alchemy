@@ -9,7 +9,7 @@ import logging
 import math
 
 import pygame
-from .board import SIZE
+from .board import SALT, SIZE
 from .modes import ADVENTURE_MODES
 from .adventure import saved_medal
 
@@ -21,6 +21,7 @@ BG = (15, 24, 30)
 TEXT = (241, 229, 203)
 MUTED = (156, 173, 174)
 GOLD = (223, 181, 103)
+SALT_COLOR, SALT_INK = (176, 170, 152), (60, 56, 48)
 MEDAL_COLORS = {'Bronze': (205, 154, 111), 'Silver': (195, 209, 220), 'Gold': GOLD}
 UNSTABLE = (255, 196, 110)
 SURFACE = (35, 49, 55)
@@ -288,6 +289,9 @@ def draw_board(canvas, session):
             pending = (x, y) in game.pending
             dx, dy = motion.offset(x, y, now)
             rect = pygame.Rect(LEFT+(x+dx)*TILE+3, TOP+(y+dy)*TILE+3, TILE-6, TILE-6)
+            if value == SALT:
+                draw_salt(canvas, rect, pending)
+                continue
             pygame.draw.rect(screen, session.mode.colors[value], rect, border_radius=10)
             pygame.draw.rect(screen, (255, 226, 154) if pending else (104, 107, 99), rect, 1, border_radius=10)
             symbol = session.symbols[value]
@@ -307,6 +311,18 @@ def draw_board(canvas, session):
         cell = pygame.Rect(LEFT+x*TILE+3, TOP+y*TILE+3, TILE-6, TILE-6)
         pygame.draw.rect(screen, TEXT, cell.inflate(10, 10), 2, border_radius=14)
     screen.set_clip(None)
+
+
+def draw_salt(canvas, rect, pending):
+    """Salt: a pale stone tile with the alchemical sign for salt (a circle cut by a bar)."""
+    screen = canvas.screen
+    pygame.draw.rect(screen, SALT_COLOR, rect, border_radius=10)
+    pygame.draw.rect(screen, (255, 226, 154) if pending else (150, 146, 132), rect, 2, border_radius=10)
+    radius = rect.width // 2 - 14
+    pygame.draw.circle(screen, SALT_INK, rect.center, radius, 3)
+    pygame.draw.line(screen, SALT_INK, (rect.centerx - radius, rect.centery), (rect.centerx + radius - 1, rect.centery), 3)
+    if pending:
+        canvas.shade(rect, (255, 234, 173, 95))
 
 
 def draw_unstable(screen, rect, tier, now, reduced_motion):

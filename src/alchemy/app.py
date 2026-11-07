@@ -6,7 +6,7 @@ from pathlib import Path
 
 os.environ.setdefault('PYGAME_HIDE_SUPPORT_PROMPT', '1')
 import pygame
-from .board import Game, SIZE, adjacent
+from .board import SALT, Game, SIZE, adjacent
 from .adventure import AdventureGame, EXPERIMENTS, CAMPAIGN_KITS, chapter_of, experiment_medal
 from .medals import MEDAL_RANK
 from .resources import load_symbols
@@ -380,9 +380,12 @@ class Session:
             self.cursor = (min(SIZE - 1, max(0, x + dx)), min(SIZE - 1, max(0, y + dy)))
 
     def press_cell(self, cell):
-        """A click or Enter on a board cell; empty Adventure cells do nothing."""
+        """A click or Enter on a board cell; empty Adventure cells do nothing, salt explains."""
         x, y = cell
-        if self.game.grid[y][x] is not None:
+        if self.game.grid[y][x] == SALT:
+            self.game.message = "Salt can't be moved. Match water beside it, or blast it."
+            self.audio.play('invalid')
+        elif self.game.grid[y][x] is not None:
             self.select(cell)
 
     def select(self, cell):

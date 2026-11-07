@@ -172,12 +172,13 @@ swaps); since the plate never changes, undoing simply gives the swap back.
 
 These four stages form **Chapter 1: The Great Work**. **Chapter 2: The Tria Prima**
 follows the three principles of alchemy, Sulfur, Mercury and Salt, and ends on a new
-plate. Its first two stages are ready:
+plate. Its first three stages are ready:
 
 | Stage | Experiment | Goal | Kit | Stirs | Silver / Gold |
 | --- | --- | --- | --- | --- | --- |
 | 5. Sulfur | The Burning | Reach 3,500 points | Reserves of 20 of each element | **2** | 40 material / **win without stirring** |
 | 6. Mercury | Quicksilver | Detonate 5 unstable symbols | Reserves of 12 of each element; **swaps and matches run diagonally too** | 8 | 30 / 40 |
+| 7. Salt | Fixation | Dissolve all 6 salt tiles | Reserves of 20 of each element; **6 salt tiles** on the board | 8 | 40 / 70 |
 
 The Burning's Gold ignores material: any win that never stirs earns it, so look ahead
 at what each swap leaves behind. Running out of moves with both stirs spent ends the run.
@@ -186,6 +187,11 @@ Quicksilver plays like [Diagonal](#game-modes): swap any touching symbols, diago
 included, and lines of 4 count in every direction. A diagonal run of 5 forms a Line
 symbol, which blasts along its diagonal when matched. L, T and plus shapes still come
 only from straight rows and columns.
+
+Salt is inert: it falls like any tile but can't be swapped or matched, and it isn't
+material. Salt dissolves in water: a water match beside a salt tile (above, below or
+to the side) dissolves it, and any unstable blast that reaches it does too. A stir
+shuffles salt along with everything else.
 
 Stages unlock in order and your progress is saved
 locally with your scores. Winning a stage shows **Stage complete**: press **Enter** (or

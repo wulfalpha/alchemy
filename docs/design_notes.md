@@ -1002,3 +1002,39 @@ or beats the efficient one on material: luck, not skill, decides. A detonation t
 separates them sharply. **Quicksilver** (`adventure-kit-quicksilver-v1`): detonate 5,
 12 of each element, 8 stirs, Silver 30 / Gold 40, the same shape as Chapter 1 (Silver
 for about a quarter of efficient runs, Gold for about a tenth).
+
+### Chapter 2 step 3 implemented: Salt, Fixation (2026-11-07)
+
+The player chose option (b): salt falls with gravity but can't be swapped or matched.
+`board.SALT` (-1) is a grid value that `matched_runs`, `legal_moves` and `Game.attempt`
+skip; gravity and refill treat it like any tile; blasts clear it. It isn't material
+(`material_left`, `consumed` and the insufficient-material check leave it out). A stir
+shuffles salt with everything else. Plates can place it with the letter `s`.
+
+**Removal rule changed after calibration.** Salt that only unstable blasts remove was
+nearly unwinnable: it sinks to the bottom, where few blasts reach, and it blocks moves,
+burning stirs. Seed 42, 100 runs, 8 stirs, 20 of each element:
+
+| Rule | Salt | Random wins | Efficient wins |
+| --- | --- | --- | --- |
+| Blasts only | 4 / 6 / 8 | 0 / 0 / 0 | 2 / 1 / 0 |
+| Any adjacent match | 6 / 8 | 99 / 95 | 100 / 98 |
+| Adjacent water match | 6 / 8 | 41 / 23 | 57 / 34 |
+
+The player chose **water dissolves salt** (`Experiment.dissolver`, an element index):
+a matched tile of that element dissolves orthogonally adjacent salt
+(`adventure.dissolved_salt`, added to the reaction's cells), and blasts still do. The
+new `DISSOLVE` objective wins when no salt is left.
+
+**Fixation** (`adventure-kit-fixation-v1`): 6 salt at (1,3) (6,3) (2,5) (5,5) (3,1) (4,6),
+20 of each element, 8 stirs, water dissolves. 200 runs per policy on seed 42:
+
+| Salt | Policy | Wins | Wins with 30+ / 40+ / 50+ / 60+ / 70+ |
+| --- | --- | --- | --- |
+| **6** | random | 81 | 34 / 22 / 18 / 13 / 10 |
+| **6** | efficient | **117** | 70 / **59** / 53 / 41 / **28** |
+| 7 | random / efficient | 65 / 86 | efficient: 37 / 26 / 21 / 15 / 9 |
+| 8 | random / efficient | 45 / 69 | efficient: 26 / 11 / 4 / 1 / 0 |
+
+Material left is spread widely (a fast clear leaves most of the reserves), so the
+medals sit high: Silver 40 (30% of efficient runs), Gold 70 (14%).

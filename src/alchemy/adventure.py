@@ -3,15 +3,15 @@ import copy
 from collections import Counter
 from dataclasses import dataclass, replace
 
-from .board import ELEMENT, LINE, SQUARE, Game, SIZE, matches, legal_moves
+from .board import ELEMENT, LINE, SALT, SQUARE, Game, SIZE, matched_runs, matches, legal_moves
 from .modes import ADVENTURE, DIAGONAL
 from .medals import efficiency_medal, swap_medal, V1_THRESHOLDS, UNSTABLE_THRESHOLDS
 
 
 # Objectives: reach the points target, remove every tile of one element (`element`, an
-# index into the mode's names) from board and reserves, or detonate `detonations`
-# unstable symbols of any kind.
-POINTS, PURIFY, DETONATE = 'points', 'purify', 'detonate'
+# index into the mode's names) from board and reserves, detonate `detonations`
+# unstable symbols of any kind, or dissolve every salt tile (only blasts remove salt).
+POINTS, PURIFY, DETONATE, DISSOLVE = 'points', 'purify', 'detonate', 'dissolve'
 
 
 @dataclass(frozen=True)
@@ -42,6 +42,10 @@ class Experiment:
     # over it is graded Silver or Bronze on the silver threshold.
     gold_stirs: int | None = None
     diagonal: bool = False          # swaps and matches also run diagonally, as in Diagonal mode
+    # Salt: (x, y) cells of the opening board that hold it, and the element whose matches
+    # dissolve salt they touch (index into the mode's names); unstable blasts always do.
+    salt: tuple = ()
+    dissolver: int | None = None
 
 
 # Released definitions stay unchanged so their saved scores keep their meaning.
@@ -121,6 +125,10 @@ CHAPTERS = (
                                   reserves=(12, 12, 12, 12), seed=42, stir_limit=8, unstable=True,
                                   medals=(30, 40), objective=DETONATE, detonations=5, diagonal=True),
             'Match diagonally too. Detonate 5 unstable symbols.'),
+        Kit('Salt', Experiment(key='adventure-kit-fixation-v1', title='Fixation', seed=42, stir_limit=8,
+                               unstable=True, medals=(40, 70), objective=DISSOLVE, dissolver=1,
+                               salt=((1, 3), (6, 3), (2, 5), (5, 5), (3, 1), (4, 6))),
+            'Salt dissolves in water: match water beside it.'),
     )),
 )
 CAMPAIGN_KITS = tuple(kit for chapter in CHAPTERS for kit in chapter.kits)
@@ -165,9 +173,24 @@ def saved_medal(experiment_key, material_left, swaps, stirs=None):
 
 
 def parse_layout(rows, names):
-    """Rows of letters (first letter of each element name; '.' empty) as a grid."""
-    letters = {name[0]: index for index, name in enumerate(names)}
+    """Rows of letters (first letter of each element name; 's' salt; '.' empty) as a grid."""
+    letters = {name[0]: index for index, name in enumerate(names)} | {'s': SALT}
     return [[None if ch == '.' else letters[ch] for ch in row] for row in rows]
+
+
+def dissolved_salt(grid, mode, element):
+    """Salt cells beside (orthogonally) a matched tile of `element`."""
+    if element is None:
+        return set()
+    cells = set()
+    for run in matched_runs(grid, mode):
+        for x, y in run:
+            if grid[y][x] != element:
+                continue
+            for cx, cy in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                if 0 <= cx < SIZE and 0 <= cy < SIZE and grid[cy][cx] == SALT:
+                    cells.add((cx, cy))
+    return cells
 
 
 def finite_refill(grid, cleared, reserves, rng):
@@ -221,10 +244,10 @@ def sparse_layout(tiles, mode=ADVENTURE):
     counts = Counter(tiles)
     budget = 5000
     for element in sorted(counts):
-        if counts[element] < 4:
+        if counts[element] < 4 or element == SALT:
             continue
         for other in sorted(counts):
-            if other == element:
+            if other in (element, SALT):              # salt can't take part in the swap
                 continue
             remaining = counts.copy()
             remaining[element] -= 4
@@ -265,7 +288,7 @@ def sparse_layout(tiles, mode=ADVENTURE):
 def stir(grid, rng, mode=ADVENTURE, attempts=200):
     """Bounded search for a stable playable rearrangement of existing material."""
     tiles = [value for row in grid for value in row if value is not None]
-    if not tiles or max(Counter(tiles).values()) < 4:
+    if max(Counter(t for t in tiles if t != SALT).values(), default=0) < 4:
         return False
     for _ in range(attempts):
         rng.shuffle(tiles)
@@ -305,6 +328,8 @@ class AdventureGame(Game):
         if experiment.layout:
             self.grid = parse_layout(experiment.layout, self.mode.names)
             self.unstable = dict(experiment.marks)
+        for x, y in experiment.salt:
+            self.grid[y][x] = SALT
         if experiment.start_unstable:
             self.unstable = carry_markers(experiment.start_unstable, self.grid, self.rng)
         self.initial_material = self.material_left
@@ -327,6 +352,8 @@ class AdventureGame(Game):
             return f'remove every {self.element_name} tile'
         if objective == DETONATE:
             return f'detonate {self.experiment.detonations} unstable symbols'
+        if objective == DISSOLVE:
+            return 'dissolve every salt tile'
         return f'reach {self.experiment.target:,} points'
 
     @property
@@ -336,6 +363,8 @@ class AdventureGame(Game):
             return f'Goal: remove all {self.element_name}'
         if objective == DETONATE:
             return f'Goal: detonate {self.experiment.detonations} unstable'
+        if objective == DISSOLVE:
+            return 'Goal: dissolve the salt'
         return f'Target: {self.experiment.target:,} points'
 
     @property
@@ -348,6 +377,10 @@ class AdventureGame(Game):
             done = f'{min(self.detonations, self.experiment.detonations)} of {self.experiment.detonations} detonated'
             return f'{done}; match a symbol to set it off' if self.unstable else \
                 f'{done}; form symbols with 5+ in a row'
+        if objective == DISSOLVE:
+            how = f'match {self.mode.names[self.experiment.dissolver]} beside it, or blast it' \
+                if self.experiment.dissolver is not None else 'blast it with unstable symbols'
+            return f'{self.salt_left} salt left; {how}'
         return f'{self.points_remaining:,} points to go'
 
     @property
@@ -357,6 +390,8 @@ class AdventureGame(Game):
             return f'{self.element_left} {self.element_name} left'
         if objective == DETONATE:
             return f'{self.detonations} of {self.experiment.detonations} detonated'
+        if objective == DISSOLVE:
+            return f'{self.salt_left} salt left'
         return f'{self.points_remaining:,} points short'
 
     @property
@@ -366,7 +401,13 @@ class AdventureGame(Game):
             return self.element_left == 0
         if objective == DETONATE:
             return self.detonations >= self.experiment.detonations
+        if objective == DISSOLVE:
+            return self.salt_left == 0
         return self.score >= self.experiment.target
+
+    @property
+    def salt_left(self):
+        return sum(v == SALT for row in self.grid for v in row)
 
     @property
     def finished(self):
@@ -405,7 +446,7 @@ class AdventureGame(Game):
 
     @property
     def material_left(self):
-        return sum(self.reserves) + sum(v is not None for row in self.grid for v in row)
+        return sum(self.reserves) + sum(v is not None and v != SALT for row in self.grid for v in row)
 
     def attempt(self, a, b):
         before = self._snapshot() if self.experiment.layout and not self.pending else None
@@ -435,8 +476,12 @@ class AdventureGame(Game):
         self.message = 'Swap undone.'
         return True
 
+    def _reaction_cells(self):
+        cells = super()._reaction_cells()
+        return cells | dissolved_salt(self.grid, self.mode, self.experiment.dissolver) if cells else cells
+
     def _refill(self):
-        self.consumed += len(self.pending)
+        self.consumed += sum(self.grid[y][x] != SALT for x, y in self.pending)
         finite_refill(self.grid, self.pending, self.reserves, self.rng)
 
     def _settle(self, events):
@@ -449,13 +494,15 @@ class AdventureGame(Game):
                 self.message = f'Experiment complete: the vessel is free of {self.element_name}!'
             elif self.experiment.objective == DETONATE:
                 self.message = 'Experiment complete: the symbols are spent!'
+            elif self.experiment.objective == DISSOLVE:
+                self.message = 'Experiment complete: the salt is dissolved!'
         elif self.swaps_remaining == 0:
             self.outcome = 'stalled'
             self.failure_reason = 'swaps_exhausted'
             self.message = f'{self.failure_summary} {self.shortfall}.'
         elif not legal_moves(self.grid, self.mode):
             markers = [(self.grid[y][x], tier) for (x, y), tier in sorted(self.unstable.items())]
-            counts = Counter(v for row in self.grid for v in row if v is not None)
+            counts = Counter(v for row in self.grid for v in row if v is not None and v != SALT)
             if self.experiment.layout:                 # a fixed plate is never stirred
                 self.outcome = 'stalled'
                 self.failure_reason = 'plate_blocked'

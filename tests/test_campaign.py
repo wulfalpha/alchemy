@@ -410,3 +410,14 @@ def test_u_does_nothing_outside_plates(tmp_path):
     message = s.game.message
     press(s, pygame.K_u)
     assert s.game.message == message
+
+
+def test_clicking_salt_explains_instead_of_selecting(tmp_path):
+    s = session(tmp_path)
+    s.scores.unlock_campaign(7)
+    s.kit_index = 6
+    s.start_new_game()
+    s.motion.finish()
+    x, y = CAMPAIGN_KITS[6].experiment.salt[0]
+    s.press_cell((x, y))
+    assert s.selected is None and "Salt can't be moved" in s.game.message

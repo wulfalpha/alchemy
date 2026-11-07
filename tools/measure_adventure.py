@@ -6,7 +6,8 @@ The efficient policy considers only the visible first reaction, never future til
 with unstable symbols that includes detonations and newly formed symbols.
 For campaign objectives it prefers moves that advance the objective, then points per
 material: for purify, removing the element (holding a blast of that element's Element
-symbol until its reserve is spent); for detonate, detonating and then forming symbols.
+symbol until its reserve is spent); for detonate, detonating and then forming symbols;
+for dissolve, blasting salt and then forming symbols.
 Pass --before to measure the released experiment revisions instead of the current ones,
 or --campaign to measure the campaign kits.
 """
@@ -16,8 +17,8 @@ import json
 from random import Random
 from statistics import median
 
-from alchemy.adventure import AdventureGame, CAMPAIGN_KITS, DETONATE, EXPERIMENTS, PREVIOUS_EXPERIMENTS, PURIFY
-from alchemy.board import (ELEMENT, UNSTABLE_POINTS, detonate, legal_moves, matched_runs, shape_crossings, swap,
+from alchemy.adventure import AdventureGame, CAMPAIGN_KITS, DETONATE, DISSOLVE, dissolved_salt, EXPERIMENTS, PREVIOUS_EXPERIMENTS, PURIFY
+from alchemy.board import (ELEMENT, SALT, UNSTABLE_POINTS, detonate, legal_moves, matched_runs, shape_crossings, swap,
                            unstable_births)
 
 
@@ -25,7 +26,8 @@ def first_reaction(game, move, detail=False):
     """Points and material spent by the visible first reaction of a swap.
 
     With detail, also the purify-element tiles removed, the unstable symbols detonated
-    and formed, and whether an Element symbol of the purify element detonates."""
+    and formed, whether an Element symbol of the purify element detonates, and the salt
+    tiles blasted."""
     grid = [row[:] for row in game.grid]
     swap(grid, *move)
     unstable = dict(game.unstable)
@@ -40,13 +42,15 @@ def first_reaction(game, move, detail=False):
     points = (len(matched) * 25 + sum((len(run)-4)*25 for run in runs)
               + len(shapes['l_shape'])*100 + len(shapes['t_shape'])*150
               + len(shapes['plus'])*200 + len(blasted) * UNSTABLE_POINTS)
-    spent = len(matched) + len(blasted) - len(births)
+    blasted_salt = sum(grid[y][x] == SALT for x, y in blasted)
+    salt = blasted_salt + len(dissolved_salt(grid, game.mode, game.experiment.dissolver) - blasted)
+    spent = len(matched) + len(blasted) - len(births) - blasted_salt
     if not detail:
         return points, spent
     element = game.experiment.element
     removed = sum(grid[y][x] == element for x, y in (matched | blasted) - births.keys())
     element_blast = any(tier == ELEMENT and grid[y][x] == element for (x, y), tier in detonated.items())
-    return points, spent, removed, len(detonated), len(births), element_blast
+    return points, spent, removed, len(detonated), len(births), element_blast, salt
 
 
 def choose_move(game, policy, rng):
@@ -56,13 +60,15 @@ def choose_move(game, policy, rng):
     ranked = []
     objective = game.experiment.objective
     for move in moves:
-        points, spent, removed, detonates, forms, element_blast = first_reaction(game, move, detail=True)
+        points, spent, removed, detonates, forms, element_blast, salt = first_reaction(game, move, detail=True)
         rank = (points / max(spent, 1), points)
         if objective == PURIFY:
             early = element_blast and game.reserves[game.experiment.element] > 0
             rank = (not early, removed / max(spent, 1)) + rank
         elif objective == DETONATE:
             rank = (detonates, forms) + rank
+        elif objective == DISSOLVE:
+            rank = (salt, forms) + rank
         ranked.append(rank)
     best = max(ranked)
     return rng.choice([move for move, rank in zip(moves, ranked) if rank == best])
