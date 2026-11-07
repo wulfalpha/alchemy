@@ -228,6 +228,7 @@ class Game:
         self.last_swap = ()
         self.last_cleared = set()  # cells the latest reaction removed (new unstable symbols stay)
         self.banked = Counter()    # tier -> unstable symbols lost when a dead board was replaced
+        self.detonations = 0       # unstable symbols detonated so far
         self.unused_bonus = None   # set when the game ends: see cash_in()
         self.message = 'Select a symbol, then an adjacent symbol.'
 
@@ -290,6 +291,7 @@ class Game:
         matched = {cell for run in runs for cell in run}
         blasted, detonated = detonate(self.grid, runs, self.unstable)
         blasted -= matched
+        self.detonations += len(detonated)
         cleared = self.pending | blasted
         births = (unstable_births(runs, shapes, self.last_swap if self.chain == 1 else ())
                   if self.mode.unstable else {})

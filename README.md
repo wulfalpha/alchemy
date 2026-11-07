@@ -150,15 +150,23 @@ campaign is a sequence of hand-designed Adventure experiments, one for each stag
 the alchemists' Great Work. Each stage teaches one idea, has a single fixed design with
 its own stir limit and medal thresholds, and keeps its own efficiency scoreboard.
 
-| Stage | Experiment | Kit | Target | Stirs | Silver / Gold |
+| Stage | Experiment | Goal | Kit | Stirs | Silver / Gold |
 | --- | --- | --- | --- | --- | --- |
-| 1. Nigredo | The Dry Flask | 64 starting tiles; reserves of 20 fire, **8 water**, 20 air, 20 earth | 3,500 | 8 | 30 / 40 |
+| 1. Nigredo | The Dry Flask | Reach 3,500 points | Reserves of 20 fire, **8 water**, 20 air, 20 earth | 8 | 30 / 40 |
+| 2. Albedo | Purification | Remove every earth tile from the board and reserves | Reserves of 20 fire, 20 water, 20 air, **12 earth**; starts with an **earth Element symbol** | 8 | 30 / 40 |
+| 3. Citrinitas | The Golden Shape | Detonate 3 unstable symbols of any kind | Reserves of **12** of each element | 8 | 40 / 50 |
+
+Every stage starts with 64 tiles on the board. Points still score and appear on the
+scoreboard, but only the goal decides a win. Purification's Element symbol clears every
+earth tile on the board when it detonates, so it pays to wait until the earth reserve
+is spent: earth left stranded in ones, twos and threes can never be matched. The
+sidebar shows the goal and your progress toward it.
 
 Stages unlock in order: winning a stage opens the next, and your progress is saved
 locally with your scores. Press **E** to switch between open stages (it asks before
 abandoning a game in progress). The campaign opens on the newest stage you have
 reached. Unstable symbols work as in [Adventure](#unstable-symbols-in-adventure).
-More stages are planned.
+A fourth stage, Rubedo, is planned.
 
 ### Adventure efficiency medals
 

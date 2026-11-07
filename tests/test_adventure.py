@@ -168,7 +168,8 @@ def test_released_experiment_definition_requires_a_new_revision_for_changes():
     from dataclasses import asdict
     assert asdict(FIRST_EXPERIMENT) == dict(
         key='adventure-first-v2', title='First Transmutation', target=3500,
-        reserves=(20, 20, 20, 20), seed=42, stir_attempts=200, stir_limit=None, unstable=False, medals=(30, 45))
+        reserves=(20, 20, 20, 20), seed=42, stir_attempts=200, stir_limit=None, unstable=False, medals=(30, 45),
+        objective='points', element=None, detonations=1, start_unstable=())
 
 
 @pytest.mark.parametrize('limit', [3, 5, 8])

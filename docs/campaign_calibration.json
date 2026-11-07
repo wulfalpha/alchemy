@@ -1,0 +1,146 @@
+[
+  {
+    "mode": "The Dry Flask",
+    "experiment": "adventure-kit-dry-flask-v1",
+    "policy": "random",
+    "runs": 100,
+    "fixed_seed": 42,
+    "outcomes": {
+      "success": 81,
+      "stirs_exhausted": 8,
+      "insufficient_material": 11
+    },
+    "material_min": 1,
+    "material_median": 17,
+    "material_p75": 24,
+    "material_max": 63,
+    "winners_at_least": {
+      "25": 19,
+      "30": 11,
+      "35": 8,
+      "40": 6,
+      "45": 3,
+      "50": 2
+    }
+  },
+  {
+    "mode": "The Dry Flask",
+    "experiment": "adventure-kit-dry-flask-v1",
+    "policy": "efficient",
+    "runs": 100,
+    "fixed_seed": 42,
+    "outcomes": {
+      "success": 99,
+      "stirs_exhausted": 1
+    },
+    "material_min": 1,
+    "material_median": 25,
+    "material_p75": 34,
+    "material_max": 62,
+    "winners_at_least": {
+      "25": 53,
+      "30": 40,
+      "35": 25,
+      "40": 11,
+      "45": 4,
+      "50": 3
+    }
+  },
+  {
+    "mode": "Purification",
+    "experiment": "adventure-kit-purification-v1",
+    "policy": "random",
+    "runs": 100,
+    "fixed_seed": 42,
+    "outcomes": {
+      "insufficient_material": 44,
+      "success": 53,
+      "stirs_exhausted": 3
+    },
+    "material_min": 1,
+    "material_median": 22,
+    "material_p75": 30,
+    "material_max": 49,
+    "winners_at_least": {
+      "25": 24,
+      "30": 15,
+      "35": 8,
+      "40": 5,
+      "45": 3,
+      "50": 0
+    }
+  },
+  {
+    "mode": "Purification",
+    "experiment": "adventure-kit-purification-v1",
+    "policy": "efficient",
+    "runs": 100,
+    "fixed_seed": 42,
+    "outcomes": {
+      "insufficient_material": 28,
+      "success": 70,
+      "stirs_exhausted": 2
+    },
+    "material_min": 3,
+    "material_median": 22.0,
+    "material_p75": 35,
+    "material_max": 50,
+    "winners_at_least": {
+      "25": 34,
+      "30": 26,
+      "35": 22,
+      "40": 15,
+      "45": 7,
+      "50": 2
+    }
+  },
+  {
+    "mode": "The Golden Shape",
+    "experiment": "adventure-kit-golden-shape-v1",
+    "policy": "random",
+    "runs": 100,
+    "fixed_seed": 42,
+    "outcomes": {
+      "insufficient_material": 59,
+      "success": 21,
+      "stirs_exhausted": 18,
+      "search_exhausted": 2
+    },
+    "material_min": 1,
+    "material_median": 18,
+    "material_p75": 27,
+    "material_max": 43,
+    "winners_at_least": {
+      "25": 7,
+      "30": 3,
+      "35": 3,
+      "40": 2,
+      "45": 0,
+      "50": 0
+    }
+  },
+  {
+    "mode": "The Golden Shape",
+    "experiment": "adventure-kit-golden-shape-v1",
+    "policy": "efficient",
+    "runs": 100,
+    "fixed_seed": 42,
+    "outcomes": {
+      "success": 81,
+      "insufficient_material": 17,
+      "stirs_exhausted": 2
+    },
+    "material_min": 1,
+    "material_median": 40,
+    "material_p75": 45,
+    "material_max": 61,
+    "winners_at_least": {
+      "25": 57,
+      "30": 51,
+      "35": 46,
+      "40": 41,
+      "45": 21,
+      "50": 16
+    }
+  }
+]

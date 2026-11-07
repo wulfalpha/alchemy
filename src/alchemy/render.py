@@ -37,7 +37,7 @@ RESTART_BUTTON = pygame.Rect(818, 590, 164, 46)
 # (a 0 reads as an o), so the large numeric sizes use Cormorant Infant, whose
 # default digits are lining; its distinct a and g never appear at those sizes.
 SANS, SERIF, NUMERALS = 'SourceSans3-Regular.ttf', 'CormorantGaramond-SemiBold.otf', 'CormorantInfant-SemiBold.otf'
-FONTS = {14: (SANS, 15), 16: (SANS, 17), 19: (SANS, 21),
+FONTS = {14: (SANS, 15), 16: (SANS, 17), 19: (SANS, 21), 20: (SERIF, 25),
          24: (SERIF, 29), 38: (NUMERALS, 46), 48: (NUMERALS, 58)}
 CONFIRM_PROMPTS = {'restart': 'Abandon this experiment? Press R or New game again.',
                    'mode': 'Abandon this experiment and switch mode? Press C again.',
@@ -119,7 +119,7 @@ class ClassicView:
 
 
 class AdventureView:
-    """Adventure: finite material, a points target, and efficiency stats."""
+    """Adventure: finite material, an objective, and efficiency stats."""
 
     def counter(self, game):
         return (str(game.material_left), 'MATERIAL LEFT',
@@ -128,9 +128,13 @@ class AdventureView:
     def panel(self, canvas, session):
         game = session.game
         kit = getattr(session, 'kit', None)
-        canvas.text(f'{kit.stage}: {game.experiment.title}' if kit else game.experiment.title, (662, 305), 24)
-        canvas.text(f'Target: {game.experiment.target:,} points', (PANEL, 341), 19, GOLD)
-        canvas.text(f'{game.points_remaining:,} points to go', (PANEL, 366), 14, MUTED)
+        title = f'{kit.stage}: {game.experiment.title}' if kit else game.experiment.title
+        if canvas.fonts[24].size(title)[0] <= PANEL_WIDTH:
+            canvas.text(title, (PANEL, 305), 24)
+        else:
+            canvas.text(title, (PANEL, 308), 20)
+        canvas.text(game.objective_title, (PANEL, 341), 19, GOLD)
+        canvas.text(game.objective_progress, (PANEL, 366), 14, MUTED)
         if sum(game.reserves):
             canvas.text('Replacement reserves', (PANEL, 390), 14, MUTED)
         else:
@@ -153,7 +157,7 @@ class AdventureView:
 
     def end_details(self, canvas, game):
         if game.outcome == 'stalled':
-            canvas.text(f'{game.points_remaining:,} points short / {game.material_left} material left',
+            canvas.text(f'{game.shortfall} / {game.material_left} material left',
                         (122, 452), 16, GOLD)
         else:
             canvas.text(f'{game.medal} medal / Material left: {game.material_left}',

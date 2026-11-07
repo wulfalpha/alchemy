@@ -1,12 +1,13 @@
 """The campaign: authored kits that unlock in order, with progress saved locally."""
-from dataclasses import replace
 from types import SimpleNamespace
 
 import pygame
 import pytest
 
 import alchemy.app as app
-from alchemy.adventure import CAMPAIGN_KITS, EXPERIMENTS, PREVIOUS_EXPERIMENTS, Kit, medal_thresholds
+from alchemy.adventure import (CAMPAIGN_KITS, DETONATE, EXPERIMENTS, PREVIOUS_EXPERIMENTS, PURIFY,
+                               medal_thresholds)
+from alchemy.board import ELEMENT
 from alchemy.audio import Audio
 from alchemy.modes import CAMPAIGN, MODES
 from alchemy.scores import Scoreboard, ranking_order
@@ -34,12 +35,9 @@ def win(s):
 
 
 @pytest.fixture
-def two_stages(monkeypatch):
-    """A second stage, so unlocking and switching can be exercised before it ships."""
-    second = Kit('Albedo', replace(CAMPAIGN_KITS[0].experiment, key='adventure-kit-test-v1',
-                                   title='Test Plate'), 'A test.')
-    monkeypatch.setattr(app, 'CAMPAIGN_KITS', CAMPAIGN_KITS + (second,))
-    return second
+def two_stages():
+    """The second stage, which the first unlocks."""
+    return CAMPAIGN_KITS[1]
 
 
 # ---------- definitions ----------
@@ -62,6 +60,38 @@ def test_the_dry_flask_is_scarce_in_water_only():
     assert CAMPAIGN_KITS[0].stage == 'Nigredo'
     assert flask.reserves == (20, 8, 20, 20)
     assert (flask.target, flask.stir_limit, flask.medals) == (3500, 8, (30, 40))
+
+
+def test_purification_starts_with_an_earth_element_and_a_small_earth_reserve():
+    kit = CAMPAIGN_KITS[1]
+    purification = kit.experiment
+    assert kit.stage == 'Albedo' and purification.objective == PURIFY
+    assert purification.element == 3 and purification.reserves == (20, 20, 20, 12)
+    assert purification.start_unstable == ((3, ELEMENT),)
+    assert (purification.stir_limit, purification.medals) == (8, (30, 40))
+
+
+def test_the_golden_shape_asks_for_three_detonations():
+    kit = CAMPAIGN_KITS[2]
+    shape = kit.experiment
+    assert kit.stage == 'Citrinitas' and shape.objective == DETONATE and shape.detonations == 3
+    assert shape.reserves == (12,)*4 and (shape.stir_limit, shape.medals) == (8, (40, 50))
+
+
+def test_every_stage_starts_and_draws(tmp_path):
+    from alchemy.render import Canvas, draw
+    scores = Scoreboard(tmp_path)
+    scores.unlock_campaign(len(CAMPAIGN_KITS))
+    s = session(tmp_path)
+    canvas = Canvas()
+    for index in range(len(CAMPAIGN_KITS)):
+        s.kit_index = index
+        s.start_new_game()
+        assert s.game.experiment is CAMPAIGN_KITS[index].experiment
+        assert CAMPAIGN_KITS[index].lesson in s.game.message
+        draw(canvas, s)
+        s.game.outcome, s.game.failure_reason = 'stalled', 'stirs_exhausted'
+        draw(canvas, s)
 
 
 def test_campaign_is_an_adventure_mode():
