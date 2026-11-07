@@ -1,4 +1,5 @@
 """Finite material experiments; reaction scoring is shared with Classic."""
+import copy
 from collections import Counter
 from dataclasses import dataclass, replace
 
@@ -257,6 +258,7 @@ class AdventureGame(Game):
         self.consumed = 0
         self.turns = 0
         self.stirs = 0
+        self.history = []   # a fixed plate's positions before each swap, for undo
         if experiment.layout:
             self.grid = parse_layout(experiment.layout, self.mode.names)
             self.unstable = dict(experiment.marks)
@@ -363,10 +365,32 @@ class AdventureGame(Game):
         return sum(self.reserves) + sum(v is not None for row in self.grid for v in row)
 
     def attempt(self, a, b):
+        before = self._snapshot() if self.experiment.layout and not self.pending else None
         accepted = super().attempt(a, b)
         if accepted:
             self.turns += 1
+            if before is not None:
+                self.history.append(before)
         return accepted
+
+    # A fixed plate is deterministic, so undoing a swap is the same as replaying the plate
+    # up to it; it restores everything, including the swap count. Not after a win.
+    _UNDO_SKIP = ('history', 'rng', 'mode', 'experiment')
+
+    def _snapshot(self):
+        return copy.deepcopy({k: v for k, v in vars(self).items() if k not in self._UNDO_SKIP})
+
+    @property
+    def can_undo(self):
+        return bool(self.history) and not self.pending and self.outcome != 'success'
+
+    def undo(self):
+        """Take back the last swap on a fixed plate; False when there is nothing to undo."""
+        if not self.can_undo:
+            return False
+        vars(self).update(self.history.pop())
+        self.message = 'Swap undone.'
+        return True
 
     def _refill(self):
         self.consumed += len(self.pending)

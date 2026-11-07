@@ -267,3 +267,35 @@ def test_win_and_chapter_screens_draw(tmp_path):
     s.start_new_game()
     finish(s)
     draw(canvas, s)
+
+
+# ---------- undo on the plate ----------
+
+def test_u_undoes_swaps_on_the_red_plate_one_at_a_time(tmp_path):
+    s = session(tmp_path)
+    s.scores.unlock_campaign(4)
+    s.kit_index = 3
+    s.start_new_game()
+    s.motion.finish()
+    start = [row[:] for row in s.game.grid]
+    press(s, pygame.K_u)
+    assert s.game.message == 'Nothing to undo.'
+    positions = []
+    for move in (((6, 2), (7, 2)), ((6, 6), (6, 7))):     # the solution's opening swaps
+        positions.append([row[:] for row in s.game.grid])
+        assert s.game.attempt(*move)
+        while s.game.pending:
+            s.game.resolve()
+    assert s.game.turns == 2
+    press(s, pygame.K_u)
+    assert s.game.grid == positions[1] and s.game.turns == 1
+    press(s, pygame.K_u)
+    assert s.game.grid == start == positions[0] and s.game.turns == 0
+
+
+def test_u_does_nothing_outside_plates(tmp_path):
+    s = session(tmp_path)
+    s.motion.finish()
+    message = s.game.message
+    press(s, pygame.K_u)
+    assert s.game.message == message

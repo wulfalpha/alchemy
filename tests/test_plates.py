@@ -80,3 +80,62 @@ def test_the_solver_finds_the_fewest_swaps():
     best, lines, _ = solve(PLATE)
     assert (best, lines) == (1, [(((3, 7), (4, 7)),)])
     assert solve(replace(PLATE, layout=(EMPTY,) * 7 + ('fwfwfwfw',)))[0] is None
+
+
+# ---------- undo ----------
+
+# One swap clears four fire; the fire at (6, 7) stays, so the plate is not yet won.
+UNFINISHED = (EMPTY,) * 5 + ('...w....', '...a....', 'fffaf.f.')
+
+
+def settle(game):
+    while game.pending:
+        game.resolve()
+
+
+def test_undo_restores_the_position_and_gives_the_swap_back():
+    game = AdventureGame(experiment=replace(PLATE, layout=UNFINISHED, swap_limit=5))
+    start = [row[:] for row in game.grid]
+    assert not game.can_undo and not game.undo()
+    assert game.attempt((0, 7), (1, 7)) is False          # refused swaps leave no history
+    assert not game.history
+    assert game.attempt((3, 7), (4, 7))
+    settle(game)
+    assert game.outcome != 'success' and game.score > 0 and game.turns == 1
+    assert game.undo()
+    assert game.grid == start and game.turns == 0 and game.score == 0 and game.consumed == 0
+    assert game.message == 'Swap undone.' and not game.history and game.outcome is None
+
+
+def test_undo_works_after_running_out_of_swaps_but_not_after_a_win():
+    layout = (EMPTY,) * 5 + ('...w....', '...a....', 'fffaf.f.')
+    game = AdventureGame(experiment=replace(PLATE, layout=layout, swap_limit=1))
+    assert game.attempt((3, 7), (4, 7))
+    settle(game)
+    assert game.outcome == 'stalled' and game.can_undo
+    assert game.undo() and game.outcome is None and game.failure_reason is None
+    assert game.swaps_remaining == 1
+
+    won = AdventureGame(experiment=PLATE)
+    assert won.attempt((3, 7), (4, 7))
+    settle(won)
+    assert won.outcome == 'success' and not won.can_undo and not won.undo()
+
+
+def test_undo_restores_unstable_symbols():
+    marks = (((3, 6), LINE),)
+    game = AdventureGame(experiment=replace(PLATE, layout=UNFINISHED, marks=marks, swap_limit=5))
+    before = (dict(game.unstable), [row[:] for row in game.grid])
+    assert game.attempt((3, 7), (4, 7))
+    settle(game)
+    assert game.undo()
+    assert (game.unstable, game.grid) == before
+
+
+def test_undo_is_only_for_fixed_plates():
+    from alchemy.adventure import FIRST_EXPERIMENT
+    game = AdventureGame(experiment=FIRST_EXPERIMENT)
+    from alchemy.board import legal_moves
+    assert game.attempt(*legal_moves(game.grid, game.mode)[0])
+    settle(game)
+    assert not game.history and not game.undo()

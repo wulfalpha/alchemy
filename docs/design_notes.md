@@ -903,3 +903,13 @@ and 7 (9), against thousands of dead ends; random play wins 36 of 2,000 games (1
 never in 5. The planned limit of 6 would leave no room for Bronze, so the limit is
 **7: Gold in 5, Silver in 6, Bronze in 7**. A test re-runs the solver on the shipped
 plate (best 5, one line, unsolvable without symbols), so it can never ship unsolvable.
+
+### Undo on fixed plates (2026-11-06)
+
+The player could not yet beat The Red Plate and restarting after each wrong swap was the
+main friction. **U** now undoes swaps on a fixed plate (`AdventureGame.undo`): before
+each accepted swap the game snapshots its state (everything but the history, generator,
+mode, and experiment), and undo restores it, swap count included. Undo is free because
+R already replays the deterministic plate with no penalty; it only saves replaying from
+the start. It works after a stall (no swaps left, blocked plate) but not after a win,
+whose score is already saved. Other Adventure kits refill randomly, so they have no undo.
