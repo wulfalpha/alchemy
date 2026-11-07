@@ -7,7 +7,8 @@ from pathlib import Path
 os.environ.setdefault('PYGAME_HIDE_SUPPORT_PROMPT', '1')
 import pygame
 from .board import Game, SIZE, adjacent
-from .adventure import AdventureGame, EXPERIMENTS, CAMPAIGN_KITS, CHAPTER, experiment_medal
+from .adventure import AdventureGame, EXPERIMENTS, CAMPAIGN_KITS, chapter_of, experiment_medal
+from .medals import MEDAL_RANK
 from .resources import load_symbols
 from .audio import Audio
 from .scores import Scoreboard, score_categories
@@ -134,7 +135,12 @@ class Session:
     def tagline(self):
         if not self.campaign:
             return self.mode.tagline
-        return f'{CHAPTER}: stage {self.kit_index + 1} of {len(CAMPAIGN_KITS)}'
+        chapter, first = self.chapter()
+        return f'{chapter.name}: stage {self.kit_index - first + 1} of {len(chapter.kits)}'
+
+    def chapter(self):
+        """The current stage's chapter and the index of its first stage."""
+        return chapter_of(self.kit_index)
 
     def score_seed(self):
         return self.game.seed if isinstance(self.game, AdventureGame) else self.args.seed
@@ -155,8 +161,9 @@ class Session:
         """The medal of the best saved win of a campaign stage, or None."""
         experiment = kit.experiment
         seed = experiment.seed if self.args.seed is None else self.args.seed
-        best = self.scores.top(seed, mode=experiment.key, rules=self.mode.rules)
-        return experiment_medal(experiment, best[0]['material_left'], best[0]['swaps']) if best else None
+        medals = [experiment_medal(experiment, entry['material_left'], entry['swaps'], entry['stirs'])
+                  for entry in self.scores.top(seed, mode=experiment.key, rules=self.mode.rules)]
+        return max(filter(None, medals), key=MEDAL_RANK.get, default=None)
 
     @property
     def stage_won(self):
@@ -173,7 +180,9 @@ class Session:
 
     @property
     def chapter_complete(self):
-        return self.stage_won and self.kit_index == len(CAMPAIGN_KITS) - 1
+        """The last stage of a chapter has just been won."""
+        chapter, first = self.chapter()
+        return self.stage_won and self.kit_index == first + len(chapter.kits) - 1
 
     def advance_stage(self):
         self.kit_index += 1

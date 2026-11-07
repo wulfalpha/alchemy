@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Campaign
+- **Chapter 2, The Tria Prima, begins.** Finishing Chapter 1 now shows its medals and
+  offers the next chapter with **Enter**. The header shows the current chapter's stages.
+  Players who already finished Chapter 1 find Chapter 2 open.
+- **Stage 5, Sulfur: The Burning.** Reach 3,500 points with only **2 stirs**. Silver at
+  40 material left; **Gold for any win without stirring**.
+- A stage's medal dot shows its best medal, even when that is not the top-ranked run
+  (a no-stir Gold can leave less material than a stirred Silver).
+
 ## 0.1.12
 
 ### Campaign

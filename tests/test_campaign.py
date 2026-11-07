@@ -6,8 +6,8 @@ import pygame
 import pytest
 
 import alchemy.app as app
-from alchemy.adventure import (CAMPAIGN_KITS, DETONATE, EXPERIMENTS, PREVIOUS_EXPERIMENTS, PURIFY,
-                               medal_thresholds)
+from alchemy.adventure import (CAMPAIGN_KITS, CHAPTERS, DETONATE, EXPERIMENTS, PREVIOUS_EXPERIMENTS, PURIFY,
+                               chapter_of, experiment_medal, medal_thresholds, saved_medal)
 from alchemy.board import ELEMENT
 from alchemy.audio import Audio
 from alchemy.modes import CAMPAIGN, MODES
@@ -256,6 +256,62 @@ def test_stage_medals_show_each_stages_best_win(tmp_path):
     assert s.stage_medals[0] == 'Gold' and s.stage_medals[1:] == [None] * (len(CAMPAIGN_KITS) - 1)
 
 
+# ---------- chapters ----------
+
+RED_PLATE, BURNING = 3, 4      # the last stage of Chapter 1 and the first of Chapter 2
+
+
+def test_chapters_hold_the_stages_in_unlock_order():
+    assert [chapter.name for chapter in CHAPTERS] == ['Chapter 1', 'Chapter 2']
+    assert [c.title for c in CHAPTERS] == ['The Great Work', 'The Tria Prima']
+    assert CAMPAIGN_KITS == tuple(kit for chapter in CHAPTERS for kit in chapter.kits)
+    assert chapter_of(RED_PLATE) == (CHAPTERS[0], 0)
+    assert chapter_of(BURNING) == (CHAPTERS[1], 4)
+    with pytest.raises(IndexError):
+        chapter_of(len(CAMPAIGN_KITS))
+
+
+def test_the_burning_gives_two_stirs_and_gold_only_without_stirring():
+    kit = CAMPAIGN_KITS[BURNING]
+    burning = kit.experiment
+    assert kit.stage == 'Sulfur' and burning.title == 'The Burning'
+    assert burning.stir_limit == 2 and burning.gold_stirs == 0 and burning.objective == 'points'
+    assert experiment_medal(burning, 5, 30, stirs=0) == 'Gold'
+    assert experiment_medal(burning, 45, 30, stirs=1) == 'Silver'
+    assert experiment_medal(burning, 39, 30, stirs=2) == 'Bronze'
+    assert experiment_medal(burning, 45, 30) == 'Silver'           # stirs unknown: no Gold
+    assert saved_medal(burning.key, 45, 30, 0) == 'Gold'
+    assert saved_medal(burning.key, 45, 30, 1) == 'Silver'
+
+
+def test_a_stir_gated_gold_still_shows_as_the_stages_best_medal(tmp_path):
+    s = session(tmp_path)
+    key = CAMPAIGN_KITS[BURNING].experiment.key
+    s.scores.record('a', 'T', 4000, 42, mode=key, rules=s.mode.rules, material_left=50, swaps=30, stirs=2)
+    s.scores.record('b', 'T', 4000, 42, mode=key, rules=s.mode.rules, material_left=12, swaps=30, stirs=0)
+    s.reload_scores()
+    assert s.stage_medals[BURNING] == 'Gold'
+
+
+def test_finishing_chapter_1_leads_into_chapter_2(tmp_path):
+    s = session(tmp_path)
+    s.scores.unlock_campaign(RED_PLATE + 1)
+    s.kit_index = RED_PLATE
+    s.start_new_game()
+    finish(s)
+    assert s.chapter_complete and s.next_kit is CAMPAIGN_KITS[BURNING]
+    assert 'Sulfur unlocked' in s.game.message
+    press(s, pygame.K_RETURN)
+    assert s.kit is CAMPAIGN_KITS[BURNING] and not s.game.finished
+    assert s.tagline() == f'Chapter 2: stage 1 of {len(CHAPTERS[1].kits)}'
+    assert s.chapter() == (CHAPTERS[1], BURNING)
+
+
+def test_players_who_finished_chapter_1_find_chapter_2_open(tmp_path):
+    Scoreboard(tmp_path).unlock_campaign(RED_PLATE + 2)       # recorded past the old last stage
+    assert session(tmp_path).kit is CAMPAIGN_KITS[BURNING]
+
+
 def test_win_and_chapter_screens_draw(tmp_path):
     from alchemy.render import Canvas, draw
     canvas = Canvas()
@@ -266,6 +322,11 @@ def test_win_and_chapter_screens_draw(tmp_path):
     s.kit_index = len(CAMPAIGN_KITS) - 1
     s.start_new_game()
     finish(s)
+    draw(canvas, s)
+    s.kit_index = RED_PLATE                       # Chapter 1 complete, Chapter 2 offered
+    s.start_new_game()
+    finish(s)
+    assert s.chapter_complete and s.next_kit
     draw(canvas, s)
 
 

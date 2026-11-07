@@ -104,7 +104,7 @@ Adventure scores shows earlier revisions separately: `adventure-first-v2` (befor
 unstable symbols) and the original `adventure-first-v1`, with unavailable
 efficiency statistics clearly labeled. The earlier launch name
 `--mode adventure-first-v1` still works. The initial target is for playtesting;
-campaign progression and reactant recovery are future work.
+reactant recovery is future work.
 
 ### Adventure difficulty
 
@@ -170,10 +170,22 @@ two unstable symbols. Its medals grade swaps used, and its scoreboard ranks by f
 swaps. Press **U** to undo a swap (as often as you like, even after running out of
 swaps); since the plate never changes, undoing simply gives the swap back.
 
-These four stages form **Chapter 1: The Great Work**; later chapters will add more. Stages unlock in order and your progress is saved
+These four stages form **Chapter 1: The Great Work**. **Chapter 2: The Tria Prima**
+follows the three principles of alchemy, Sulfur, Mercury and Salt, and ends on a new
+plate. Its first stage is ready:
+
+| Stage | Experiment | Goal | Kit | Stirs | Silver / Gold |
+| --- | --- | --- | --- | --- | --- |
+| 5. Sulfur | The Burning | Reach 3,500 points | Reserves of 20 of each element | **2** | 40 material / **win without stirring** |
+
+The Burning's Gold ignores material: any win that never stirs earns it, so look ahead
+at what each swap leaves behind. Running out of moves with both stirs spent ends the run.
+
+Stages unlock in order and your progress is saved
 locally with your scores. Winning a stage shows **Stage complete**: press **Enter** (or
-click the board) to begin the next one. Finishing the last stage shows **Chapter 1
-complete** with your best medal for each stage. The header shows one dot per stage,
+click the board) to begin the next one. Finishing a chapter's last stage shows
+**Chapter complete** with your best medal for each of its stages, and Enter begins the
+next chapter. The header shows the current chapter and one dot per stage of it,
 filled with the colour of your best medal once won, with the current stage ringed. Press
 **E** at any time to replay an open stage for a better medal (it asks before abandoning
 a game in progress). The campaign opens on the newest stage you have reached. Unstable

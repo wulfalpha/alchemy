@@ -11,7 +11,7 @@ import math
 import pygame
 from .board import SIZE
 from .modes import ADVENTURE_MODES
-from .adventure import CAMPAIGN_KITS, CHAPTER, CHAPTER_TITLE, saved_medal
+from .adventure import saved_medal
 
 WIDTH, HEIGHT = 1040, 780
 LEFT, TOP, TILE = 48, 154, 70
@@ -125,8 +125,12 @@ class AdventureView:
         if game.experiment.medal_by == 'swaps':
             silver, gold = game.experiment.medals
             return (str(game.swaps_remaining), 'SWAPS LEFT', f'Gold in {gold} / Silver in {silver}')
-        return (str(game.material_left), 'MATERIAL LEFT',
-                'Silver {}+ / Gold {}+'.format(*game.experiment.medals))
+        silver, gold = game.experiment.medals
+        if game.experiment.gold_stirs == 0:
+            goal = f'Silver {silver}+ / Gold: no stirs' if gold == 0 else f'Silver {silver}+ / Gold {gold}+, no stirs'
+        else:
+            goal = f'Silver {silver}+ / Gold {gold}+'
+        return str(game.material_left), 'MATERIAL LEFT', goal
 
     def panel(self, canvas, session):
         game = session.game
@@ -202,7 +206,8 @@ class AdventureView:
             canvas.text('-', (440, y), 16, MUTED)
             canvas.text('Efficiency stats unavailable', (108, y+19), 14, MUTED)
         else:
-            medal = saved_medal(category.mode if category else None, entry['material_left'], entry['swaps'])
+            medal = saved_medal(category.mode if category else None, entry['material_left'], entry['swaps'],
+                                entry['stirs'])
             canvas.text(f"{entry['material_left']} / {medal}", (440, y), 16, MEDAL_COLORS[medal])
             canvas.text(f"Swaps: {entry['swaps']} / Stirs: {entry['stirs']}", (108, y+19), 14, MUTED)
 
@@ -248,13 +253,14 @@ def draw_header(canvas, session):
 
 
 def draw_progress(canvas, session):
-    """Campaign header: the chapter, one dot per stage (medal colour once won), and the
-    current stage ringed."""
-    canvas.text(CHAPTER, (PANEL, 67), 16, MUTED)
-    x = PANEL + canvas.fonts[16].size(CHAPTER)[0] + 18
+    """Campaign header: the chapter, one dot per stage of it (medal colour once won), and
+    the current stage ringed."""
+    chapter, first = session.chapter()
+    canvas.text(chapter.name, (PANEL, 67), 16, MUTED)
+    x = PANEL + canvas.fonts[16].size(chapter.name)[0] + 18
     open_stages = session.unlocked_kits()
-    for index in range(len(CAMPAIGN_KITS)):
-        centre = (x + index*24, 78)
+    for index in range(first, first + len(chapter.kits)):
+        centre = (x + (index - first)*24, 78)
         medal = session.stage_medals[index] if index < len(session.stage_medals) else None
         if medal:
             pygame.draw.circle(canvas.screen, MEDAL_COLORS[medal], centre, 6)
@@ -263,7 +269,7 @@ def draw_progress(canvas, session):
         if index == session.kit_index:
             pygame.draw.circle(canvas.screen, GOLD, centre, 10, 1)
     hint = 'E: switch stage' if open_stages > 1 else 'Win to open the next stage'
-    canvas.text(hint, (x + len(CAMPAIGN_KITS)*24 + 6, 67), 14, MUTED)
+    canvas.text(hint, (x + len(chapter.kits)*24 + 6, 67), 14, MUTED)
 
 
 def draw_board(canvas, session):
@@ -361,7 +367,8 @@ def draw_end_screen(canvas, session, view):
     game = session.game
     canvas.shade(BOARD, (9, 17, 24, 225))
     if session.chapter_complete:
-        canvas.text(f'{CHAPTER} complete: {CHAPTER_TITLE}', (110, 320), 24, GOLD)
+        chapter, _ = session.chapter()
+        canvas.text(f'{chapter.name} complete: {chapter.title}', (110, 320), 24, GOLD)
     elif session.stage_won:
         canvas.text(f'Stage complete: {session.kit.stage}', (110, 320), 24, GOLD)
     else:
@@ -377,20 +384,27 @@ def draw_end_screen(canvas, session, view):
 
 
 def draw_stage_complete(canvas, session):
-    """Campaign win: offer the next stage, or sum up the chapter after its last stage."""
-    if session.next_kit:
-        following = session.next_kit
-        pygame.draw.rect(canvas.screen, SURFACE, NEXT_STAGE_BOX, border_radius=8)
-        canvas.text(f'Enter: next stage, {following.stage}: {following.experiment.title}',
-                    (NEXT_STAGE_BOX.x + 14, NEXT_STAGE_BOX.y + 11), 16, GOLD)
-        canvas.text('E: replay any open stage for a better medal', (122, 640), 14, MUTED)
-    elif session.chapter_complete:
-        for index, kit in enumerate(CAMPAIGN_KITS):
+    """Campaign win: offer the next stage; after a chapter's last stage, first list the
+    chapter's medals (two columns) and offer the next chapter if it is open."""
+    following, box = session.next_kit, NEXT_STAGE_BOX
+    if session.chapter_complete:
+        chapter, first = session.chapter()
+        for offset, kit in enumerate(chapter.kits):
+            index = first + offset
             medal = session.stage_medals[index] if index < len(session.stage_medals) else None
-            canvas.text(f'{kit.stage}: {kit.experiment.title}', (122, 584 + index*22), 14)
-            canvas.text(medal or '-', (420, 584 + index*22), 14, MEDAL_COLORS.get(medal, MUTED))
-        canvas.text('More chapters are coming.  E: replay a stage', (122, 584 + len(CAMPAIGN_KITS)*22 + 8),
-                    14, MUTED)
+            x, y = 122 + (offset % 2)*236, 584 + (offset // 2)*22
+            canvas.text(canvas.fit(f'{kit.stage}: {kit.experiment.title}', 186, 14), (x, y), 14)
+            canvas.text(medal or '-', (x + 190, y), 14, MEDAL_COLORS.get(medal, MUTED))
+        box = box.move(0, ((len(chapter.kits) + 1) // 2)*22 + 6)
+        if not following:
+            canvas.text('More chapters are coming.  E: replay a stage', (122, box.y + 8), 14, MUTED)
+            return
+    if following:
+        label = 'next chapter' if session.chapter_complete else 'next stage'
+        pygame.draw.rect(canvas.screen, SURFACE, box, border_radius=8)
+        canvas.text(canvas.fit(f'Enter: {label}, {following.stage}: {following.experiment.title}', box.w - 28),
+                    (box.x + 14, box.y + 11), 16, GOLD)
+        canvas.text('E: replay any open stage for a better medal', (122, box.bottom + 14), 14, MUTED)
 
 
 def draw_scoreboard(canvas, session, view):

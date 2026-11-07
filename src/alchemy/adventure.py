@@ -38,6 +38,9 @@ class Experiment:
     marks: tuple = ()
     swap_limit: int | None = None
     medal_by: str = 'material'
+    # If set, Gold needs at most this many stirs used (and `medals` gold material); a run
+    # over it is graded Silver or Bronze on the silver threshold.
+    gold_stirs: int | None = None
 
 
 # Released definitions stay unchanged so their saved scores keep their meaning.
@@ -67,36 +70,67 @@ class Kit:
     lesson: str
 
 
-# Chapter 1 of the campaign: one stage per phase of the Great Work (Rubedo is planned).
-CHAPTER = 'Chapter 1'
-CHAPTER_TITLE = 'The Great Work'
+@dataclass(frozen=True)
+class Chapter:
+    """A group of campaign stages with a shared theme."""
+    number: int
+    title: str
+    kits: tuple
+
+    @property
+    def name(self):
+        return f'Chapter {self.number}'
+
 
 # The campaign, in unlock order. Each kit is one fixed design with its own stir limit and
 # medal thresholds; numbers are calibrated in docs/design_notes.md. Never change a released
 # kit's experiment: give it a new key instead, as for First Transmutation.
-CAMPAIGN_KITS = (
-    Kit('Nigredo', Experiment(key='adventure-kit-dry-flask-v1', title='The Dry Flask', target=3500,
-                              reserves=(20, 8, 20, 20), seed=42, stir_limit=8, unstable=True,
-                              medals=(30, 40)),
-        'Water is scarce, so spend it wisely.'),
-    Kit('Albedo', Experiment(key='adventure-kit-purification-v1', title='Purification', reserves=(20, 20, 20, 12),
-                             seed=42, stir_limit=8, unstable=True, medals=(30, 40), objective=PURIFY,
-                             element=3, start_unstable=((3, ELEMENT),)),
-        'Remove every earth tile. Time the Element blast.'),
-    Kit('Citrinitas', Experiment(key='adventure-kit-golden-shape-v1', title='The Golden Shape',
-                                 reserves=(12, 12, 12, 12), seed=42, stir_limit=8, unstable=True,
-                                 medals=(40, 50), objective=DETONATE, detonations=3),
-        'Form and detonate 3 unstable symbols.'),
-    # A fixed plate found by tools/solve_plate.py (generator seed 463): the fewest swaps
-    # that win is 5, by one line, and it cannot be won without its two symbols.
-    Kit('Rubedo', Experiment(key='adventure-plate-red-v1', title='The Red Plate', reserves=(0, 0, 0, 0),
-                             unstable=True, objective=PURIFY, element=0, swap_limit=7, medal_by='swaps',
-                             medals=(6, 5),
-                             layout=('......aw', '.a..feew', '.e.fffwa', 'eweeawaw',
-                                     'awffewwa', 'eewwwawe', 'ewawewaf', 'fewwaawa'),
-                             marks=(((4, 6), LINE), ((3, 5), SQUARE))),
-        'Clear every fire tile. Every swap counts.'),
+CHAPTERS = (
+    # Chapter 1: one stage per phase of the Great Work.
+    Chapter(1, 'The Great Work', (
+        Kit('Nigredo', Experiment(key='adventure-kit-dry-flask-v1', title='The Dry Flask', target=3500,
+                                  reserves=(20, 8, 20, 20), seed=42, stir_limit=8, unstable=True,
+                                  medals=(30, 40)),
+            'Water is scarce, so spend it wisely.'),
+        Kit('Albedo', Experiment(key='adventure-kit-purification-v1', title='Purification', reserves=(20, 20, 20, 12),
+                                 seed=42, stir_limit=8, unstable=True, medals=(30, 40), objective=PURIFY,
+                                 element=3, start_unstable=((3, ELEMENT),)),
+            'Remove every earth tile. Time the Element blast.'),
+        Kit('Citrinitas', Experiment(key='adventure-kit-golden-shape-v1', title='The Golden Shape',
+                                     reserves=(12, 12, 12, 12), seed=42, stir_limit=8, unstable=True,
+                                     medals=(40, 50), objective=DETONATE, detonations=3),
+            'Form and detonate 3 unstable symbols.'),
+        # A fixed plate found by tools/solve_plate.py (generator seed 463): the fewest swaps
+        # that win is 5, by one line, and it cannot be won without its two symbols.
+        Kit('Rubedo', Experiment(key='adventure-plate-red-v1', title='The Red Plate', reserves=(0, 0, 0, 0),
+                                 unstable=True, objective=PURIFY, element=0, swap_limit=7, medal_by='swaps',
+                                 medals=(6, 5),
+                                 layout=('......aw', '.a..feew', '.e.fffwa', 'eweeawaw',
+                                         'awffewwa', 'eewwwawe', 'ewawewaf', 'fewwaawa'),
+                                 marks=(((4, 6), LINE), ((3, 5), SQUARE))),
+            'Clear every fire tile. Every swap counts.'),
+    )),
+    # Chapter 2: the three principles, then a fixed plate.
+    Chapter(2, 'The Tria Prima', (
+        # Gold is any win without stirring (gold material 0); Silver needs 40 material.
+        Kit('Sulfur', Experiment(key='adventure-kit-burning-v1', title='The Burning', target=3500,
+                                 seed=42, stir_limit=2, unstable=True, medals=(40, 0), gold_stirs=0),
+            'Only 2 stirs. Win without stirring for Gold.'),
+    )),
 )
+CAMPAIGN_KITS = tuple(kit for chapter in CHAPTERS for kit in chapter.kits)
+
+
+def chapter_of(index):
+    """The chapter holding campaign stage `index`, and the index of its first stage."""
+    first = 0
+    for chapter in CHAPTERS:
+        if index < first + len(chapter.kits):
+            return chapter, first
+        first += len(chapter.kits)
+    raise IndexError(index)
+
+
 _BY_KEY = {e.key: e for e in (*PREVIOUS_EXPERIMENTS.values(), *EXPERIMENTS.values(),
                               *(kit.experiment for kit in CAMPAIGN_KITS))}
 
@@ -107,19 +141,22 @@ def medal_thresholds(experiment_key):
     return experiment.medals if experiment else V1_THRESHOLDS
 
 
-def experiment_medal(experiment, material_left, swaps):
+def experiment_medal(experiment, material_left, swaps, stirs=None):
     """The medal a successful run of `experiment` earns."""
     if experiment.medal_by == 'swaps':
         return swap_medal(swaps, experiment.medals)
-    return efficiency_medal(material_left, experiment.medals)
+    medal = efficiency_medal(material_left, experiment.medals)
+    if medal == 'Gold' and experiment.gold_stirs is not None and (stirs is None or stirs > experiment.gold_stirs):
+        return 'Silver' if material_left >= experiment.medals[0] else 'Bronze'
+    return medal
 
 
-def saved_medal(experiment_key, material_left, swaps):
+def saved_medal(experiment_key, material_left, swaps, stirs=None):
     """The medal of a saved win; unknown and older keys grade material with v1 thresholds."""
     experiment = _BY_KEY.get(experiment_key)
     if experiment is None:
         return efficiency_medal(material_left)
-    return experiment_medal(experiment, material_left, swaps)
+    return experiment_medal(experiment, material_left, swaps, stirs)
 
 
 def parse_layout(rows, names):
@@ -331,7 +368,7 @@ class AdventureGame(Game):
 
     @property
     def medal(self):
-        return (experiment_medal(self.experiment, self.material_left, self.turns)
+        return (experiment_medal(self.experiment, self.material_left, self.turns, self.stirs)
                 if self.outcome == 'success' else None)
 
     @property

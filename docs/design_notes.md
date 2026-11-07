@@ -945,3 +945,33 @@ Open questions, to settle when each stage is built:
 
 Build order (*initial*): (1) multi-chapter structure plus Sulfur; (2) Mercury; (3) Salt;
 (4) The Philosopher's Plate.
+
+### Chapter 2 step 1 implemented: chapters and Sulfur, The Burning (2026-11-07)
+
+- **Chapters.** `adventure.CHAPTERS` is a tuple of `Chapter(number, title, kits)`;
+  `CAMPAIGN_KITS` stays the flat unlock order, so saved progress (an index) is unchanged.
+  `chapter_of(index)` gives a stage's chapter and its first index. The header shows the
+  current chapter's dots; `Session.chapter_complete` is true after a chapter's last
+  stage, whose screen lists that chapter's medals in two columns and, when the next
+  chapter is open, offers it with Enter. Chapter 1 finishers already had progress
+  recorded past The Red Plate, so The Burning opens for them.
+- **Stir-gated Gold.** `Experiment.gold_stirs`: Gold also needs at most that many stirs,
+  otherwise the run is graded on the silver threshold. Medals now take the stirs saved
+  with each score. Because the scoreboard still ranks by material, a stage's medal dot
+  is the best medal among its saved wins, not the top-ranked run's.
+- **The Burning** (`adventure-kit-burning-v1`): 20 of each element, 2 stirs, unstable
+  symbols, target 3,500, medals (40, 0) with `gold_stirs=0`, so Gold is any win without
+  stirring. Calibration on seed 42, 200 runs per policy:
+
+| Target | Policy | Wins | Wins with 0 / 1 / 2 stirs | Median material (wins) | Wins with 40+ |
+| --- | --- | --- | --- | --- | --- |
+| 3,000 | random | 153 | 19 / 57 / 77 | 47 | 119 |
+| 3,000 | efficient | 177 | 29 / 94 / 54 | 53 | 172 |
+| **3,500** | random | 67 | 4 / 28 / 35 | 36 | 27 |
+| **3,500** | efficient | 126 | 10 / 61 / 55 | 40 | 68 |
+| 4,000 | random | 25 | 1 / 8 / 16 | 31 | 4 |
+| 4,000 | efficient | 60 | 1 / 20 / 39 | 29 | 10 |
+
+  3,500 makes a win harder than in Chapter 1 (63% for the efficient policy against 99%
+  in The Dry Flask) while Silver stays reachable (34%). A no-stir win is rare for the
+  one-move-ahead policy (5%), which is the point: it rewards looking further ahead.
