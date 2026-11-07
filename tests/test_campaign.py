@@ -312,6 +312,56 @@ def test_players_who_finished_chapter_1_find_chapter_2_open(tmp_path):
     assert session(tmp_path).kit is CAMPAIGN_KITS[BURNING]
 
 
+QUICKSILVER = 5
+
+
+def test_quicksilver_swaps_and_matches_diagonally():
+    from alchemy.adventure import AdventureGame
+    from alchemy.board import legal_moves
+    from alchemy.modes import ADVENTURE, DIAGONAL
+    kit = CAMPAIGN_KITS[QUICKSILVER]
+    assert kit.stage == 'Mercury' and kit.experiment.diagonal
+    assert kit.experiment.objective == DETONATE and kit.experiment.detonations == 5
+    game = AdventureGame(experiment=kit.experiment)
+    assert game.mode.directions == game.mode.swaps == DIAGONAL and game.mode.unstable
+    diagonal = [(a, b) for a, b in legal_moves(game.grid, game.mode) if a[0] != b[0] and a[1] != b[1]]
+    assert diagonal and diagonal[0] not in legal_moves(game.grid, ADVENTURE)
+    assert game.attempt(*diagonal[0])
+    plain = AdventureGame(experiment=CAMPAIGN_KITS[BURNING].experiment)
+    assert plain.mode.swaps == plain.mode.directions != DIAGONAL
+
+
+def test_a_diagonal_line_symbol_blasts_its_whole_diagonal():
+    from alchemy.board import LINE, detonate, matched_runs, unstable_births, shape_crossings
+    from alchemy.modes import DIAGONAL, ADVENTURE
+    mode = replace(ADVENTURE, directions=DIAGONAL, swaps=DIAGONAL, unstable=True)
+    grid = [[(x + 2*y) % 4 for x in range(8)] for y in range(8)]   # no runs in any direction
+    for i in range(1, 5):
+        grid[i][i] = 1
+    runs = matched_runs(grid, mode)
+    assert runs == [[(1, 1), (2, 2), (3, 3), (4, 4)]]
+    cleared, detonated = detonate(grid, runs, {(2, 2): LINE})
+    assert detonated == {(2, 2): LINE} and cleared == {(i, i) for i in range(8)}
+    grid[5][5] = 1                                                 # five in a diagonal: a Line forms
+    runs = matched_runs(grid, mode)
+    assert list(unstable_births(runs, shape_crossings(grid, mode, runs)).values()) == [LINE]
+
+
+def test_clicking_a_diagonal_neighbour_swaps_only_in_quicksilver(tmp_path):
+    from alchemy.board import legal_moves
+    s = session(tmp_path)
+    s.scores.unlock_campaign(QUICKSILVER + 1)
+    for index, swaps in ((BURNING, False), (QUICKSILVER, True)):
+        s.kit_index = index
+        s.start_new_game()
+        s.motion.finish()
+        moves = legal_moves(s.game.grid, s.game.mode)
+        a, b = next(((a, b) for a, b in moves if a[0] != b[0] and a[1] != b[1]), ((0, 0), (1, 1)))
+        s.select(a)
+        s.select(b)
+        assert (s.game.turns == 1) is swaps
+
+
 def test_win_and_chapter_screens_draw(tmp_path):
     from alchemy.render import Canvas, draw
     canvas = Canvas()

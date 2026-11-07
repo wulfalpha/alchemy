@@ -390,7 +390,7 @@ class Session:
         self.hint = None
         if self.selected == cell:
             self.selected = None
-        elif self.selected is not None and adjacent(self.selected, cell, self.mode):
+        elif self.selected is not None and adjacent(self.selected, cell, self.game.mode):
             if self.game.attempt(self.selected, cell):
                 self.audio.play('swap')
                 self.swapped = True

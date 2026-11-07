@@ -172,14 +172,20 @@ swaps); since the plate never changes, undoing simply gives the swap back.
 
 These four stages form **Chapter 1: The Great Work**. **Chapter 2: The Tria Prima**
 follows the three principles of alchemy, Sulfur, Mercury and Salt, and ends on a new
-plate. Its first stage is ready:
+plate. Its first two stages are ready:
 
 | Stage | Experiment | Goal | Kit | Stirs | Silver / Gold |
 | --- | --- | --- | --- | --- | --- |
 | 5. Sulfur | The Burning | Reach 3,500 points | Reserves of 20 of each element | **2** | 40 material / **win without stirring** |
+| 6. Mercury | Quicksilver | Detonate 5 unstable symbols | Reserves of 12 of each element; **swaps and matches run diagonally too** | 8 | 30 / 40 |
 
 The Burning's Gold ignores material: any win that never stirs earns it, so look ahead
 at what each swap leaves behind. Running out of moves with both stirs spent ends the run.
+
+Quicksilver plays like [Diagonal](#game-modes): swap any touching symbols, diagonals
+included, and lines of 4 count in every direction. A diagonal run of 5 forms a Line
+symbol, which blasts along its diagonal when matched. L, T and plus shapes still come
+only from straight rows and columns.
 
 Stages unlock in order and your progress is saved
 locally with your scores. Winning a stage shows **Stage complete**: press **Enter** (or

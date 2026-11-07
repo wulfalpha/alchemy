@@ -149,7 +149,10 @@ class AdventureView:
             canvas.text('U: undo a swap   R: start over', (PANEL, 478), 14, MUTED if game.can_undo else RULE)
             return
         if sum(game.reserves):
-            canvas.text('Replacement reserves', (PANEL, 390), 14, MUTED)
+            label = 'Replacement reserves'
+            if game.experiment.diagonal:
+                label += '   /   swap and match diagonally'
+            canvas.text(label, (PANEL, 390), 14, MUTED)
         else:
             canvas.text('Reserves exhausted', (PANEL, 387), 14, GOLD)
             canvas.text('Use the remaining board.' if not game.finished else 'No reserves remain.',

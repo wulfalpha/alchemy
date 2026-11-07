@@ -975,3 +975,30 @@ Build order (*initial*): (1) multi-chapter structure plus Sulfur; (2) Mercury; (
   3,500 makes a win harder than in Chapter 1 (63% for the efficient policy against 99%
   in The Dry Flask) while Silver stays reachable (34%). A no-stir win is rare for the
   one-move-ahead policy (5%), which is the point: it rewards looking further ahead.
+
+### Chapter 2 step 2 implemented: Mercury, Quicksilver (2026-11-07)
+
+`Experiment.diagonal` gives a kit Diagonal mode's swaps and match directions with the
+four Adventure elements (no sun). The engine already handled unstable symbols on
+diagonals: a run of 5 in any direction forms a Line, which blasts along its run's
+direction, so a diagonal Line clears its diagonal. A Line set off by another blast still
+clears its row and column, and shapes still come only from straight runs. The click
+handler now checks adjacency with the game's own mode rather than the session's.
+
+Calibration on seed 42 (60 runs for points targets, 100 for detonations; 8 stirs):
+
+| Objective | Reserves | Policy | Wins | Wins with 30+ / 40+ / 50+ |
+| --- | --- | --- | --- | --- |
+| 3,500 points | 20 each | random / efficient | 60 / 60 of 60 | 59, 56, 47 / 60, 59, 53 |
+| 5,000 points | 20 each | random / efficient | 49 / 59 of 60 | 26, 20, 15 / 33, 13, 3 |
+| 6,500 points | 20 each | random / efficient | 13 / 9 of 60 | 8, 4, 3 / 3, 1, 0 |
+| Detonate 4 | 12 each | random / efficient | 16 / 96 | 2, 0, 0 / 68, 53, 28 |
+| **Detonate 5** | 12 each | random / efficient | **3 / 80** | 0, 0, 0 / **25, 9**, 1 |
+| Detonate 6 | 12 each | random / efficient | 1 / 51 | 0, 0, 0 / 6, 1, 1 |
+| Detonate 6 | 16 each | random / efficient | 4 / 76 | 0, 0, 0 / 41, 17, 3 |
+
+Diagonal cascades are so generous that with a points target the random policy matches
+or beats the efficient one on material: luck, not skill, decides. A detonation target
+separates them sharply. **Quicksilver** (`adventure-kit-quicksilver-v1`): detonate 5,
+12 of each element, 8 stirs, Silver 30 / Gold 40, the same shape as Chapter 1 (Silver
+for about a quarter of efficient runs, Gold for about a tenth).

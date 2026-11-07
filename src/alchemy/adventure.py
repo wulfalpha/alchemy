@@ -4,7 +4,7 @@ from collections import Counter
 from dataclasses import dataclass, replace
 
 from .board import ELEMENT, LINE, SQUARE, Game, SIZE, matches, legal_moves
-from .modes import ADVENTURE
+from .modes import ADVENTURE, DIAGONAL
 from .medals import efficiency_medal, swap_medal, V1_THRESHOLDS, UNSTABLE_THRESHOLDS
 
 
@@ -41,6 +41,7 @@ class Experiment:
     # If set, Gold needs at most this many stirs used (and `medals` gold material); a run
     # over it is graded Silver or Bronze on the silver threshold.
     gold_stirs: int | None = None
+    diagonal: bool = False          # swaps and matches also run diagonally, as in Diagonal mode
 
 
 # Released definitions stay unchanged so their saved scores keep their meaning.
@@ -116,6 +117,10 @@ CHAPTERS = (
         Kit('Sulfur', Experiment(key='adventure-kit-burning-v1', title='The Burning', target=3500,
                                  seed=42, stir_limit=2, unstable=True, medals=(40, 0), gold_stirs=0),
             'Only 2 stirs. Win without stirring for Gold.'),
+        Kit('Mercury', Experiment(key='adventure-kit-quicksilver-v1', title='Quicksilver',
+                                  reserves=(12, 12, 12, 12), seed=42, stir_limit=8, unstable=True,
+                                  medals=(30, 40), objective=DETONATE, detonations=5, diagonal=True),
+            'Match diagonally too. Detonate 5 unstable symbols.'),
     )),
 )
 CAMPAIGN_KITS = tuple(kit for chapter in CHAPTERS for kit in chapter.kits)
@@ -288,7 +293,8 @@ class AdventureGame(Game):
     def __init__(self, seed=None, experiment=FIRST_EXPERIMENT):
         self.experiment = experiment
         self.seed = experiment.seed if seed is None else seed
-        super().__init__(self.seed, replace(ADVENTURE, unstable=experiment.unstable))
+        lines = dict(directions=DIAGONAL, swaps=DIAGONAL) if experiment.diagonal else {}
+        super().__init__(self.seed, replace(ADVENTURE, unstable=experiment.unstable, **lines))
         self.reserves = list(experiment.reserves)
         self.outcome = None
         self.failure_reason = None
