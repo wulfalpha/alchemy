@@ -162,11 +162,15 @@ earth tile on the board when it detonates, so it pays to wait until the earth re
 is spent: earth left stranded in ones, twos and threes can never be matched. The
 sidebar shows the goal and your progress toward it.
 
-Stages unlock in order: winning a stage opens the next, and your progress is saved
-locally with your scores. Press **E** to switch between open stages (it asks before
-abandoning a game in progress). The campaign opens on the newest stage you have
-reached. Unstable symbols work as in [Adventure](#unstable-symbols-in-adventure).
-A fourth stage, Rubedo, is planned.
+These stages form **Chapter 1: The Great Work**; a fourth stage, Rubedo, is planned,
+and later chapters will add more. Stages unlock in order and your progress is saved
+locally with your scores. Winning a stage shows **Stage complete**: press **Enter** (or
+click the board) to begin the next one. Finishing the last stage shows **Chapter 1
+complete** with your best medal for each stage. The header shows one dot per stage,
+filled with the colour of your best medal once won, with the current stage ringed. Press
+**E** at any time to replay an open stage for a better medal (it asks before abandoning
+a game in progress). The campaign opens on the newest stage you have reached. Unstable
+symbols work as in [Adventure](#unstable-symbols-in-adventure).
 
 ### Adventure efficiency medals
 

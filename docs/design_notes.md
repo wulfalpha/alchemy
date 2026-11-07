@@ -858,3 +858,20 @@ to stage for random play (81, 53, 21). The run is saved in
 [campaign_calibration.json](campaign_calibration.json) and reproduces with
 `uv run python tools/measure_adventure.py --campaign --runs 100 --seed 42`; its Dry
 Flask figures match the step 1 calibration exactly.
+
+### Campaign progression and chapters (2026-11-06)
+
+Playtesting showed that **E** was not discoverable as the way to move on. The player
+chose: the four Great Work stages are **Chapter 1** (`adventure.CHAPTER`,
+`CHAPTER_TITLE`), with later chapters of three or four stages each to follow.
+
+- A campaign win shows **Stage complete: {stage}** and a box offering **Enter: next
+  stage**; Enter, Space, or a click on the board starts it (`Session.next_kit`,
+  `advance_stage`). **E** still replays any open stage.
+- Winning the last stage shows **Chapter 1 complete** with the best medal of each stage.
+- The header replaces "Stage n of N" with "Chapter 1", a dot per stage (filled in the
+  best medal's colour once won, outlined when open, dim when locked; the current stage
+  ringed), and the E hint. `Session.stage_medals` is recomputed with the scores.
+- Fix: progress is now recorded one past the final stage, so stages added later (The Red
+  Plate) open for players who already finished the chapter. Before, a final-stage win
+  recorded nothing.

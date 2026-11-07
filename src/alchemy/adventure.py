@@ -57,6 +57,10 @@ class Kit:
     lesson: str
 
 
+# Chapter 1 of the campaign: one stage per phase of the Great Work (Rubedo is planned).
+CHAPTER = 'Chapter 1'
+CHAPTER_TITLE = 'The Great Work'
+
 # The campaign, in unlock order. Each kit is one fixed design with its own stir limit and
 # medal thresholds; numbers are calibrated in docs/design_notes.md. Never change a released
 # kit's experiment: give it a new key instead, as for First Transmutation.

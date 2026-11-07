@@ -15,6 +15,10 @@
   any kind, with reserves of 12 of each element. 8 stirs; Silver 40, Gold 50.
 - Campaign experiments can have goals other than points; the sidebar and end screen
   show the goal and your progress.
+- **Progression.** The three stages form Chapter 1: The Great Work. Winning a stage
+  shows **Stage complete** and **Enter** (or a click) begins the next; the last stage
+  shows **Chapter 1 complete** with your best medal per stage. The header shows a dot
+  per stage in its best medal's colour. **E** replays any open stage.
 
 ## 0.1.10
 

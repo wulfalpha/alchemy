@@ -124,7 +124,7 @@ def test_campaign_starts_on_the_first_stage_with_its_lesson(tmp_path):
     assert s.game.experiment is CAMPAIGN_KITS[0].experiment
     assert s.game.mode.unstable
     assert CAMPAIGN_KITS[0].lesson in s.game.message
-    assert s.tagline().startswith('Stage 1 of')
+    assert s.tagline().startswith('Chapter 1: stage 1 of')
     assert s.categories()[0].label == 'Nigredo: The Dry Flask / current'
 
 
@@ -175,3 +175,75 @@ def test_e_cycles_open_stages_and_asks_before_abandoning(tmp_path, two_stages):
 def test_reopening_resumes_at_the_newest_open_stage(tmp_path, two_stages):
     Scoreboard(tmp_path).unlock_campaign(2)
     assert session(tmp_path).kit is two_stages
+
+
+# ---------- progression after a win ----------
+
+def finish(s):
+    s.motion.finish()
+    s.game.outcome = 'success'
+    s.record_score()
+
+
+def test_enter_on_the_win_screen_begins_the_next_stage(tmp_path):
+    s = session(tmp_path)
+    finish(s)
+    assert s.stage_won and s.next_kit is CAMPAIGN_KITS[1] and not s.chapter_complete
+    assert 'Press Enter' in s.game.message
+    press(s, pygame.K_RETURN)
+    assert s.kit is CAMPAIGN_KITS[1] and s.game.experiment is CAMPAIGN_KITS[1].experiment
+    assert not s.game.finished
+
+
+def test_clicking_the_win_screen_begins_the_next_stage(tmp_path):
+    s = session(tmp_path)
+    finish(s)
+    s.handle(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(300, 400)), (1040, 780))
+    assert s.kit is CAMPAIGN_KITS[1]
+
+
+def test_a_stalled_run_offers_no_next_stage(tmp_path):
+    s = session(tmp_path)
+    s.motion.finish()
+    s.game.outcome = 'stalled'
+    s.record_score()
+    assert not s.stage_won and s.next_kit is None
+    press(s, pygame.K_RETURN)
+    assert s.kit is CAMPAIGN_KITS[0]
+
+
+def test_the_last_stage_completes_the_chapter_and_keeps_progress_for_later_stages(tmp_path):
+    s = session(tmp_path)
+    s.scores.unlock_campaign(len(CAMPAIGN_KITS))
+    s.kit_index = len(CAMPAIGN_KITS) - 1
+    s.start_new_game()
+    finish(s)
+    assert s.chapter_complete and s.next_kit is None
+    assert s.scores.campaign_unlocked() == len(CAMPAIGN_KITS) + 1
+    assert s.unlocked_kits() == len(CAMPAIGN_KITS)
+    press(s, pygame.K_RETURN)
+    assert s.kit is CAMPAIGN_KITS[-1] and s.game.finished
+
+
+def test_stage_medals_show_each_stages_best_win(tmp_path):
+    s = session(tmp_path)
+    assert s.stage_medals == [None] * len(CAMPAIGN_KITS)
+    s.scores.record('a', 'T', 4000, 42, mode=CAMPAIGN_KITS[0].experiment.key, rules=s.mode.rules,
+                    material_left=10, swaps=30, stirs=0)
+    s.scores.record('b', 'T', 4000, 42, mode=CAMPAIGN_KITS[0].experiment.key, rules=s.mode.rules,
+                    material_left=45, swaps=30, stirs=0)
+    s.reload_scores()
+    assert s.stage_medals[0] == 'Gold' and s.stage_medals[1:] == [None] * (len(CAMPAIGN_KITS) - 1)
+
+
+def test_win_and_chapter_screens_draw(tmp_path):
+    from alchemy.render import Canvas, draw
+    canvas = Canvas()
+    s = session(tmp_path)
+    finish(s)
+    draw(canvas, s)
+    s.scores.unlock_campaign(len(CAMPAIGN_KITS))
+    s.kit_index = len(CAMPAIGN_KITS) - 1
+    s.start_new_game()
+    finish(s)
+    draw(canvas, s)

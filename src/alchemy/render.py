@@ -11,7 +11,7 @@ import math
 import pygame
 from .board import SIZE
 from .modes import ADVENTURE_MODES
-from .adventure import medal_thresholds
+from .adventure import CAMPAIGN_KITS, CHAPTER, CHAPTER_TITLE, medal_thresholds
 from .medals import efficiency_medal
 
 WIDTH, HEIGHT = 1040, 780
@@ -39,6 +39,7 @@ RESTART_BUTTON = pygame.Rect(818, 590, 164, 46)
 SANS, SERIF, NUMERALS = 'SourceSans3-Regular.ttf', 'CormorantGaramond-SemiBold.otf', 'CormorantInfant-SemiBold.otf'
 FONTS = {14: (SANS, 15), 16: (SANS, 17), 19: (SANS, 21), 20: (SERIF, 25),
          24: (SERIF, 29), 38: (NUMERALS, 46), 48: (NUMERALS, 58)}
+NEXT_STAGE_BOX = pygame.Rect(110, 584, 480, 42)
 CONFIRM_PROMPTS = {'restart': 'Abandon this experiment? Press R or New game again.',
                    'mode': 'Abandon this experiment and switch mode? Press C again.',
                    'kit': 'Abandon this experiment and switch stage? Press E again.'}
@@ -222,9 +223,31 @@ def draw_header(canvas, session):
     canvas.text('T H E   F O U R F O L D   A R T', (50, 85), 14, GOLD)
     pygame.draw.rect(screen, SURFACE, PLAYER_BUTTON, border_radius=8)
     canvas.text(f'Player: {session.player}  [P]', (670, 35), 14, GOLD)
-    canvas.text(session.tagline(), (PANEL, 67), 16, MUTED)
+    if session.campaign:
+        draw_progress(canvas, session)
+    else:
+        canvas.text(session.tagline(), (PANEL, 67), 16, MUTED)
     canvas.text(f'Mode: {session.mode.label}  [C]', (PANEL, 92), 14, GOLD)
     pygame.draw.line(screen, RULE, (48, 125), (982, 125))
+
+
+def draw_progress(canvas, session):
+    """Campaign header: the chapter, one dot per stage (medal colour once won), and the
+    current stage ringed."""
+    canvas.text(CHAPTER, (PANEL, 67), 16, MUTED)
+    x = PANEL + canvas.fonts[16].size(CHAPTER)[0] + 18
+    open_stages = session.unlocked_kits()
+    for index in range(len(CAMPAIGN_KITS)):
+        centre = (x + index*24, 78)
+        medal = session.stage_medals[index] if index < len(session.stage_medals) else None
+        if medal:
+            pygame.draw.circle(canvas.screen, MEDAL_COLORS[medal], centre, 6)
+        else:
+            pygame.draw.circle(canvas.screen, TEXT if index < open_stages else RULE, centre, 6, 1)
+        if index == session.kit_index:
+            pygame.draw.circle(canvas.screen, GOLD, centre, 10, 1)
+    hint = 'E: switch stage' if open_stages > 1 else 'Win to open the next stage'
+    canvas.text(hint, (x + len(CAMPAIGN_KITS)*24 + 6, 67), 14, MUTED)
 
 
 def draw_board(canvas, session):
@@ -321,13 +344,37 @@ def draw_panel(canvas, session, view):
 def draw_end_screen(canvas, session, view):
     game = session.game
     canvas.shade(BOARD, (9, 17, 24, 225))
-    canvas.text(view.end_title(game), (110, 320), 24)
+    if session.chapter_complete:
+        canvas.text(f'{CHAPTER} complete: {CHAPTER_TITLE}', (110, 320), 24, GOLD)
+    elif session.stage_won:
+        canvas.text(f'Stage complete: {session.kit.stage}', (110, 320), 24, GOLD)
+    else:
+        canvas.text(view.end_title(game), (110, 320), 24)
     canvas.text(f'{game.score:,} points', (150, 370), 38, GOLD)
     status = 'Score saved locally' if session.score_saved else 'Score could not be saved'
     if session.score_saved and session.results and session.results[0]['id'] == session.run_id:
         status = view.record_status
     canvas.text(view.end_status(game, status), (110, 425), 16, GOLD)
     view.end_details(canvas, game)
+    if session.stage_won:
+        draw_stage_complete(canvas, session)
+
+
+def draw_stage_complete(canvas, session):
+    """Campaign win: offer the next stage, or sum up the chapter after its last stage."""
+    if session.next_kit:
+        following = session.next_kit
+        pygame.draw.rect(canvas.screen, SURFACE, NEXT_STAGE_BOX, border_radius=8)
+        canvas.text(f'Enter: next stage, {following.stage}: {following.experiment.title}',
+                    (NEXT_STAGE_BOX.x + 14, NEXT_STAGE_BOX.y + 11), 16, GOLD)
+        canvas.text('E: replay any open stage for a better medal', (122, 640), 14, MUTED)
+    elif session.chapter_complete:
+        for index, kit in enumerate(CAMPAIGN_KITS):
+            medal = session.stage_medals[index] if index < len(session.stage_medals) else None
+            canvas.text(f'{kit.stage}: {kit.experiment.title}', (122, 584 + index*22), 14)
+            canvas.text(medal or '-', (420, 584 + index*22), 14, MEDAL_COLORS.get(medal, MUTED))
+        canvas.text('More stages are coming.  E: replay a stage', (122, 584 + len(CAMPAIGN_KITS)*22 + 8),
+                    14, MUTED)
 
 
 def draw_scoreboard(canvas, session, view):
