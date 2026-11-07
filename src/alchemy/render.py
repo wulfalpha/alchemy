@@ -110,6 +110,9 @@ class ClassicView:
     score_row_height = 33
     tab_hint = 'Tab: current and legacy scoring'
     record_status = 'New local high score!'
+
+    def record_text(self, game):
+        return self.record_status
     ranking_note = ''
 
     def score_columns(self, canvas):
@@ -139,8 +142,10 @@ class AdventureView:
         title = f'{kit.stage}: {game.experiment.title}' if kit else game.experiment.title
         if canvas.fonts[24].size(title)[0] <= PANEL_WIDTH:
             canvas.text(title, (PANEL, 305), 24)
-        else:
+        elif canvas.fonts[20].size(title)[0] <= PANEL_WIDTH:
             canvas.text(title, (PANEL, 308), 20)
+        else:                                       # too long even smaller: the title alone
+            canvas.text(canvas.fit(game.experiment.title, PANEL_WIDTH, 24), (PANEL, 305), 24)
         canvas.text(game.objective_title, (PANEL, 341), 19, GOLD)
         canvas.text(game.objective_progress, (PANEL, 366), 14, MUTED)
         if game.experiment.layout:
@@ -200,6 +205,9 @@ class AdventureView:
     score_row_height = 34
     tab_hint = 'Tab: current and original experiment'
     record_status = 'New local best: most material left!'
+
+    def record_text(self, game):
+        return 'New local best: fewest swaps!' if game.experiment.medal_by == 'swaps' else self.record_status
     ranking_note = '  /  ranked by material left, then fewest swaps'
 
     def score_columns(self, canvas):
@@ -395,7 +403,7 @@ def draw_end_screen(canvas, session, view):
     canvas.text(f'{game.score:,} points', (150, 370), 38, GOLD)
     status = 'Score saved locally' if session.score_saved else 'Score could not be saved'
     if session.score_saved and session.results and session.results[0]['id'] == session.run_id:
-        status = view.record_status
+        status = view.record_text(game)
     canvas.text(view.end_status(game, status), (110, 425), 16, GOLD)
     view.end_details(canvas, game)
     if session.stage_won:
@@ -412,7 +420,7 @@ def draw_stage_complete(canvas, session):
             index = first + offset
             medal = session.stage_medals[index] if index < len(session.stage_medals) else None
             x, y = 122 + (offset % 2)*236, 584 + (offset // 2)*22
-            canvas.text(canvas.fit(f'{kit.stage}: {kit.experiment.title}', 186, 14), (x, y), 14)
+            canvas.text(canvas.fit(kit.experiment.title, 186, 14), (x, y), 14)
             canvas.text(medal or '-', (x + 190, y), 14, MEDAL_COLORS.get(medal, MUTED))
         box = box.move(0, ((len(chapter.kits) + 1) // 2)*22 + 6)
         if not following:

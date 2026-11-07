@@ -23,6 +23,12 @@
 - **Stage 7, Salt: Fixation.** Six **salt** tiles sit on the board: they fall but can't
   be swapped or matched. Salt dissolves in water: match water beside it, or blast it with
   an unstable symbol. Dissolve all six; 20 of each element, 8 stirs. Silver 40, Gold 70.
+- **Stage 8, Quintessence: The Philosopher's Plate.** The chapter's finale: a fixed plate
+  where you clear every fire **and** water tile within 8 swaps, with an Element, a Line
+  and a Square symbol and two salt tiles. One 6-swap solution, proven by the solver, uses
+  every symbol. Gold in 6, Silver in 7.
+- Winning a plate now says "New local best: fewest swaps!" (plates rank by swaps).
+- Long stage names no longer run off the sidebar or the chapter medal list.
 - A stage's medal dot shows its best medal, even when that is not the top-ranked run
   (a no-stir Gold can leave less material than a stirred Silver).
 

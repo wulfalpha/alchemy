@@ -26,7 +26,7 @@ class Experiment:
     unstable: bool = False   # skilful matches leave unstable symbols (see board.py)
     medals: tuple = V1_THRESHOLDS   # (silver, gold) material left; see medals.py
     objective: str = POINTS
-    element: int | None = None      # the element a PURIFY objective removes
+    element: int | tuple | None = None   # the element (or elements) a PURIFY objective removes
     detonations: int = 1            # unstable symbols a DETONATE objective needs
     start_unstable: tuple = ()      # (element, tier) symbols placed on the opening board
     # A fixed plate: the opening board as rows of letters (the first letter of each
@@ -129,6 +129,15 @@ CHAPTERS = (
                                unstable=True, medals=(40, 70), objective=DISSOLVE, dissolver=1,
                                salt=((1, 3), (6, 3), (2, 5), (5, 5), (3, 1), (4, 6))),
             'Salt dissolves in water: match water beside it.'),
+        # A fixed plate found by tools/solve_plate.py --finale (seed 1112, 2 salt): one best
+        # line of 6 swaps, which needs all three symbols and dissolves a salt tile.
+        Kit('Quintessence', Experiment(key='adventure-plate-philosophers-v1', title="The Philosopher's Plate",
+                                       reserves=(0, 0, 0, 0), unstable=True, objective=PURIFY, element=(0, 1),
+                                       dissolver=1, swap_limit=8, medal_by='swaps', medals=(7, 6),
+                                       layout=('..ee....', '.eeww..w', '.aaeaa.a', 'seeaaeaa',
+                                               'aaaweaee', 'affewafa', 'wasefaef', 'eefeafaa'),
+                                       marks=(((7, 6), ELEMENT), ((6, 4), LINE), ((2, 1), SQUARE))),
+            'Clear all fire and water. Every symbol matters.'),
     )),
 )
 CAMPAIGN_KITS = tuple(kit for chapter in CHAPTERS for kit in chapter.kits)
@@ -336,14 +345,20 @@ class AdventureGame(Game):
         self.message = f'{experiment.title}: {self.goal}.'
 
     @property
+    def purify_elements(self):
+        """The elements a PURIFY objective removes, as a tuple."""
+        element = self.experiment.element
+        return element if isinstance(element, tuple) else (element,)
+
+    @property
     def element_name(self):
-        return self.mode.names[self.experiment.element]
+        return ' and '.join(self.mode.names[e] for e in self.purify_elements)
 
     @property
     def element_left(self):
-        """Tiles of the PURIFY element still in the vessel and its reserve."""
-        e = self.experiment.element
-        return self.reserves[e] + sum(v == e for row in self.grid for v in row)
+        """Tiles of the PURIFY element(s) still in the vessel and the reserves."""
+        targets = self.purify_elements
+        return sum(self.reserves[e] for e in targets) + sum(v in targets for row in self.grid for v in row)
 
     @property
     def goal(self):

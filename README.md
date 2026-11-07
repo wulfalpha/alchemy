@@ -172,13 +172,14 @@ swaps); since the plate never changes, undoing simply gives the swap back.
 
 These four stages form **Chapter 1: The Great Work**. **Chapter 2: The Tria Prima**
 follows the three principles of alchemy, Sulfur, Mercury and Salt, and ends on a new
-plate. Its first three stages are ready:
+plate:
 
 | Stage | Experiment | Goal | Kit | Stirs | Silver / Gold |
 | --- | --- | --- | --- | --- | --- |
 | 5. Sulfur | The Burning | Reach 3,500 points | Reserves of 20 of each element | **2** | 40 material / **win without stirring** |
 | 6. Mercury | Quicksilver | Detonate 5 unstable symbols | Reserves of 12 of each element; **swaps and matches run diagonally too** | 8 | 30 / 40 |
 | 7. Salt | Fixation | Dissolve all 6 salt tiles | Reserves of 20 of each element; **6 salt tiles** on the board | 8 | 40 / 70 |
+| 8. Quintessence | The Philosopher's Plate | Clear every **fire and water** tile within **8 swaps** | A fixed plate with 2 salt tiles and an **Element**, a Line and a Square symbol; no reserves | none | Gold in 6 swaps, Silver in 7 |
 
 The Burning's Gold ignores material: any win that never stirs earns it, so look ahead
 at what each swap leaves behind. Running out of moves with both stirs spent ends the run.
@@ -192,6 +193,11 @@ Salt is inert: it falls like any tile but can't be swapped or matched, and it is
 material. Salt dissolves in water: a water match beside a salt tile (above, below or
 to the side) dissolves it, and any unstable blast that reaches it does too. A stir
 shuffles salt along with everything else.
+
+The Philosopher's Plate brings the chapter together. The solver proves it has exactly
+one 6-swap solution, which needs all three of its symbols and dissolves a salt tile on
+the way; it can't be won without the Element blast. As on The Red Plate, **U** undoes
+a swap.
 
 Stages unlock in order and your progress is saved
 locally with your scores. Winning a stage shows **Stage complete**: press **Enter** (or

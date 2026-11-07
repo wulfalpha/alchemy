@@ -1038,3 +1038,26 @@ new `DISSOLVE` objective wins when no salt is left.
 
 Material left is spread widely (a fast clear leaves most of the reserves), so the
 medals sit high: Silver 40 (30% of efficient runs), Gold 70 (14%).
+
+### Chapter 2 step 4 implemented: Quintessence, The Philosopher's Plate (2026-11-07)
+
+- **Two-element purify.** `Experiment.element` may be a tuple; `AdventureGame.purify_elements`
+  returns the targets and `element_name` joins them ("fire and water").
+- **Finale generator.** `tools/solve_plate.py --finale N [--salt K]` builds plates with
+  7 fire, 5-8 water, optional salt (water dissolves it), an Element symbol on a fire tile
+  and a Line and a Square on other tiles. It keeps plates that can't be won within 4
+  swaps, can be within 6, and can't be won without the Element symbol. 1,500 seeds gave
+  73 plain and 21 two-salt candidates. Ranked by one best line, every symbol required
+  and the size of the search:
+
+| Seed | Salt | Best | Positions | Needs | Salt dissolved |
+| --- | --- | --- | --- | --- | --- |
+| 1463 | 0 | 6 | 503 | Element, Line, Square | - |
+| **1112** | 2 | 6 | 722 | Element, Line, Square | 1 |
+| 366 | 2 | 6 | 1,999 | Element, Line | 2 |
+
+  The player chose **seed 1112** (`adventure-plate-philosophers-v1`): clear fire and
+  water, 8 swaps, Gold 6 / Silver 7. Every win is the one 6-swap line (a search to depth
+  8 finds no longer win), so in practice a solve is Gold, as with The Red Plate.
+- Fixes: a too-long sidebar title falls back to the experiment title alone; the chapter
+  medal list shows experiment titles; plate records say "fewest swaps".

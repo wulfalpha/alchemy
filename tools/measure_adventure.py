@@ -47,9 +47,9 @@ def first_reaction(game, move, detail=False):
     spent = len(matched) + len(blasted) - len(births) - blasted_salt
     if not detail:
         return points, spent
-    element = game.experiment.element
-    removed = sum(grid[y][x] == element for x, y in (matched | blasted) - births.keys())
-    element_blast = any(tier == ELEMENT and grid[y][x] == element for (x, y), tier in detonated.items())
+    targets = game.purify_elements if game.experiment.objective == PURIFY else ()
+    removed = sum(grid[y][x] in targets for x, y in (matched | blasted) - births.keys())
+    element_blast = any(tier == ELEMENT and grid[y][x] in targets for (x, y), tier in detonated.items())
     return points, spent, removed, len(detonated), len(births), element_blast, salt
 
 
@@ -63,7 +63,7 @@ def choose_move(game, policy, rng):
         points, spent, removed, detonates, forms, element_blast, salt = first_reaction(game, move, detail=True)
         rank = (points / max(spent, 1), points)
         if objective == PURIFY:
-            early = element_blast and game.reserves[game.experiment.element] > 0
+            early = element_blast and any(game.reserves[e] for e in game.purify_elements)
             rank = (not early, removed / max(spent, 1)) + rank
         elif objective == DETONATE:
             rank = (detonates, forms) + rank

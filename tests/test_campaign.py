@@ -461,3 +461,52 @@ def test_campaign_sounds_salt_undo_and_finales(tmp_path):
 def test_classic_keeps_its_game_over_sound(tmp_path):
     s = session(tmp_path, mode='classic-30')
     assert s.finale_sound() == 'game_over'
+
+
+# ---------- the Philosopher's Plate ----------
+
+PHILOSOPHERS = 7
+
+
+def test_the_philosophers_plate_has_one_best_line_that_needs_every_symbol():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
+    from solve_plate import play, solve
+    from alchemy.adventure import AdventureGame
+    from alchemy.board import ELEMENT, LINE, SQUARE
+    kit = CAMPAIGN_KITS[PHILOSOPHERS]
+    plate = kit.experiment
+    assert kit.stage == 'Quintessence' and plate.element == (0, 1) and plate.dissolver == 1
+    assert plate.swap_limit == 8 and plate.medals == (7, 6)
+    best, lines, _ = solve(plate)
+    assert best == 6 and len(lines) == 1
+    for tier in (ELEMENT, LINE, SQUARE):
+        without = replace(plate, marks=tuple(m for m in plate.marks if m[1] != tier))
+        assert solve(without)[0] is None, tier
+    game = AdventureGame(experiment=plate)
+    salt = game.salt_left
+    for move in lines[0]:
+        game = play(game, move)
+    assert game.outcome == 'success' and game.salt_left < salt and game.medal == 'Gold'
+
+
+def test_chapter_2_ends_on_the_philosophers_plate(tmp_path):
+    s = session(tmp_path)
+    s.scores.unlock_campaign(len(CAMPAIGN_KITS))
+    s.kit_index = PHILOSOPHERS
+    s.start_new_game()
+    assert s.chapter() == (CHAPTERS[1], BURNING) and len(CHAPTERS[1].kits) == 4
+    s.game.outcome = 'success'
+    assert s.finale_sound() == 'chapter_complete'
+    s.kit_index = 6
+    assert s.finale_sound() == 'success'
+
+
+def test_plate_records_praise_fewest_swaps():
+    from alchemy.adventure import AdventureGame
+    from alchemy.render import AdventureView
+    view = AdventureView()
+    assert view.record_text(AdventureGame(experiment=CAMPAIGN_KITS[PHILOSOPHERS].experiment)) == \
+        'New local best: fewest swaps!'
+    assert 'material' in view.record_text(AdventureGame(experiment=CAMPAIGN_KITS[BURNING].experiment))
