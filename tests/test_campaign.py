@@ -421,3 +421,43 @@ def test_clicking_salt_explains_instead_of_selecting(tmp_path):
     x, y = CAMPAIGN_KITS[6].experiment.salt[0]
     s.press_cell((x, y))
     assert s.selected is None and "Salt can't be moved" in s.game.message
+
+
+# ---------- sounds ----------
+
+def listen(s):
+    heard = []
+    s.audio.play = heard.append
+    return heard
+
+
+def test_campaign_sounds_salt_undo_and_finales(tmp_path):
+    s = session(tmp_path)
+    heard = listen(s)
+    s.scores.unlock_campaign(7)
+    s.kit_index = 6
+    s.start_new_game()
+    s.motion.finish()
+    s.press_cell(CAMPAIGN_KITS[6].experiment.salt[0])
+    assert heard[-1] == 'salt'
+
+    s.game.outcome = 'success'
+    s.kit_index = BURNING
+    assert s.finale_sound() == 'success'
+    s.kit_index = RED_PLATE                       # the last stage of Chapter 1
+    assert s.finale_sound() == 'chapter_complete'
+    s.game.outcome = 'stalled'
+    assert s.finale_sound() == 'failure'
+
+    s.start_new_game()
+    s.motion.finish()
+    assert s.game.attempt((6, 2), (7, 2))
+    while s.game.pending:
+        s.game.resolve()
+    press(s, pygame.K_u)
+    assert heard[-1] == 'undo'
+
+
+def test_classic_keeps_its_game_over_sound(tmp_path):
+    s = session(tmp_path, mode='classic-30')
+    assert s.finale_sound() == 'game_over'

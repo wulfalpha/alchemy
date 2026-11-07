@@ -476,6 +476,14 @@ class AdventureGame(Game):
         self.message = 'Swap undone.'
         return True
 
+    def resolve(self):
+        """As Game.resolve, adding a 'dissolve' event when the reaction clears salt."""
+        salt = any(self.grid[y][x] == SALT for x, y in self.pending)
+        events = super().resolve()
+        if salt and events:
+            events.insert(1, 'dissolve')
+        return events
+
     def _reaction_cells(self):
         cells = super()._reaction_cells()
         return cells | dissolved_salt(self.grid, self.mode, self.experiment.dissolver) if cells else cells

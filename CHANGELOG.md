@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Sound
+- **Explosions sound like explosions.** Line, Square and Element bursts now have a
+  falling thump, a crack and (for Square and Element) a rumbling roar under their bells,
+  growing with the size of the blast.
+- **New sounds:** salt fizzing as it dissolves; a dull stone knock when you click salt;
+  a soft rewind for undo on plates; a rising chime when an Adventure experiment or
+  campaign stage is won, a falling one when it stalls, and a fanfare for completing a
+  chapter. Each can be replaced with a file (see `sounds/README.md`).
+
 ### Campaign
 - **Chapter 2, The Tria Prima, begins.** Finishing Chapter 1 now shows its medals and
   offers the next chapter with **Enter**. The header shows the current chapter's stages.

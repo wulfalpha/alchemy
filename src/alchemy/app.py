@@ -256,7 +256,7 @@ class Session:
             return
         if self.game.undo():
             self.selected = self.hint = None
-            self.audio.play('restart')
+            self.audio.play('undo')
         elif not self.game.history:
             self.game.message = 'Nothing to undo.'
 
@@ -384,7 +384,7 @@ class Session:
         x, y = cell
         if self.game.grid[y][x] == SALT:
             self.game.message = "Salt can't be moved. Match water beside it, or blast it."
-            self.audio.play('invalid')
+            self.audio.play('salt')
         elif self.game.grid[y][x] is not None:
             self.select(cell)
 
@@ -428,11 +428,26 @@ class Session:
             else:
                 self.motion.fall(cleared, self.motion_time, previous_grid)
         for sound_event in events:
-            self.audio.play(sound_event)
             if sound_event == 'game_over':
+                self.audio.play(self.finale_sound())
                 self.record_score()
+            else:
+                self.audio.play(sound_event)
         self.clear_started = self.motion_time + (0 if self.reduced_motion else self.motion.duration)
         self.next_resolve = self.clear_started + 350
+
+    def finale_sound(self):
+        """The end-of-game sound: Classic's game over, or an Adventure win (a bigger one for
+        a campaign chapter's last stage) or stall."""
+        if not self.adventure:
+            return 'game_over'
+        if self.game.outcome != 'success':
+            return 'failure'
+        if self.campaign:
+            chapter, first = self.chapter()
+            if self.kit_index == first + len(chapter.kits) - 1:
+                return 'chapter_complete'
+        return 'success'
 
     def record_score(self):
         """Save a finished run once; Adventure saves only successful experiments."""

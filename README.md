@@ -239,7 +239,7 @@ Diagonal mode. Seeded and unseeded results remain separate. Nothing is rewritten
 
 ## Sounds
 
-Every event has a built-in metal or glass tone (bells, clanks, clinking vials), synthesised at startup, so the game has sound straight after `pip install`. To replace any of them, drop WAV or OGG effects into `sounds/` (or a folder given with `--sound-dir`) using the filenames in [sounds/README.md](https://github.com/wulfalpha/alchemy/blob/main/sounds/README.md), then restart. A file always takes priority over its tone, so you can replace them one at a time. Press **M** to mute, use `--volume 0.4` to adjust volume, or `--no-tones` to hear only your own files. Missing audio files or devices do not prevent play.
+Every event has a built-in tone (bells, clanks, clinking vials, thumping blasts, fizzing salt), synthesised at startup, so the game has sound straight after `pip install`. To replace any of them, drop WAV or OGG effects into `sounds/` (or a folder given with `--sound-dir`) using the filenames in [sounds/README.md](https://github.com/wulfalpha/alchemy/blob/main/sounds/README.md), then restart. A file always takes priority over its tone, so you can replace them one at a time. Press **M** to mute, use `--volume 0.4` to adjust volume, or `--no-tones` to hear only your own files. Missing audio files or devices do not prevent play.
 
 ## Artwork
 

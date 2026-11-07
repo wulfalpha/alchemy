@@ -64,6 +64,18 @@ def test_dissolving_the_last_salt_wins_and_is_not_counted_as_consumed():
     assert 'salt is dissolved' in game.message
 
 
+def test_clearing_salt_sounds_a_dissolve():
+    game = AdventureGame(experiment=replace(SALTY, salt=()))
+    game.grid = calm()
+    game.grid[4][0:3] = [WATER] * 3
+    game.grid[3][3] = WATER
+    game.grid[5][1] = SALT
+    game.grid[2][7] = SALT                  # far away, so the game goes on
+    assert game.attempt((3, 3), (3, 4))
+    events = game.resolve()
+    assert events[:2] == ['match', 'dissolve']
+
+
 def test_a_blast_dissolves_salt():
     game = AdventureGame(experiment=replace(SALTY, salt=(), dissolver=None))
     game.grid = calm()

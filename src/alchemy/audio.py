@@ -16,7 +16,8 @@ import pygame
 
 EVENTS = ('select', 'swap', 'invalid', 'match', 'cascade', 'plus',
           'l_shape', 't_shape', 'unstable', 'line_burst', 'square_burst', 'element_burst',
-          'hint', 'shuffle', 'restart', 'game_over')
+          'dissolve', 'salt', 'undo', 'hint', 'shuffle', 'restart', 'game_over',
+          'success', 'failure', 'chapter_complete')
 
 
 def keep_forever(sound):
