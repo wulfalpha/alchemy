@@ -21,3 +21,15 @@ def efficiency_medal(material_left, thresholds=V1_THRESHOLDS):
     if material_left >= silver:
         return 'Silver'
     return 'Bronze'
+
+
+def swap_medal(swaps, thresholds):
+    """Grade a solved fixed plate by swaps used: (silver, gold) are the most swaps allowed."""
+    if swaps is None:
+        return None
+    silver, gold = thresholds
+    if swaps <= gold:
+        return 'Gold'
+    if swaps <= silver:
+        return 'Silver'
+    return 'Bronze'

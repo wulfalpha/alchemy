@@ -155,15 +155,21 @@ its own stir limit and medal thresholds, and keeps its own efficiency scoreboard
 | 1. Nigredo | The Dry Flask | Reach 3,500 points | Reserves of 20 fire, **8 water**, 20 air, 20 earth | 8 | 30 / 40 |
 | 2. Albedo | Purification | Remove every earth tile from the board and reserves | Reserves of 20 fire, 20 water, 20 air, **12 earth**; starts with an **earth Element symbol** | 8 | 30 / 40 |
 | 3. Citrinitas | The Golden Shape | Detonate 3 unstable symbols of any kind | Reserves of **12** of each element | 8 | 40 / 50 |
+| 4. Rubedo | The Red Plate | Clear every fire tile within **7 swaps** | A fixed plate of 53 tiles with a Line and a Square symbol; no reserves | none | Gold in 5 swaps, Silver in 6 |
 
-Every stage starts with 64 tiles on the board. Points still score and appear on the
+The first three stages start with 64 tiles on the board. Points still score and appear on the
 scoreboard, but only the goal decides a win. Purification's Element symbol clears every
 earth tile on the board when it detonates, so it pays to wait until the earth reserve
 is spent: earth left stranded in ones, twos and threes can never be matched. The
 sidebar shows the goal and your progress toward it.
 
-These stages form **Chapter 1: The Great Work**; a fourth stage, Rubedo, is planned,
-and later chapters will add more. Stages unlock in order and your progress is saved
+The Red Plate is a puzzle: the same board every time, nothing refills, and there are no
+stirs, so every swap is a choice. A solver (`tools/solve_plate.py`) proves it can be
+won, finds the fewest swaps (5, by one line), and confirms it can't be won without its
+two unstable symbols. Its medals grade swaps used, and its scoreboard ranks by fewest
+swaps.
+
+These four stages form **Chapter 1: The Great Work**; later chapters will add more. Stages unlock in order and your progress is saved
 locally with your scores. Winning a stage shows **Stage complete**: press **Enter** (or
 click the board) to begin the next one. Finishing the last stage shows **Chapter 1
 complete** with your best medal for each stage. The header shows one dot per stage,

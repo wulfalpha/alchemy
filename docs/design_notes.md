@@ -875,3 +875,31 @@ chose: the four Great Work stages are **Chapter 1** (`adventure.CHAPTER`,
 - Fix: progress is now recorded one past the final stage, so stages added later (The Red
   Plate) open for players who already finished the chapter. Before, a final-stage win
   recorded nothing.
+
+### Campaign step 3 implemented: fixed plates and The Red Plate (2026-11-06)
+
+`Experiment.layout` (rows of element initials, `.` empty), `marks` (((x, y), tier)
+pairs), `swap_limit`, and `medal_by='swaps'` describe a fixed plate. A plate has no
+reserves and is never stirred (a blocked plate stalls with `plate_blocked`; running
+out of swaps stalls with `swaps_exhausted`). With nothing to refill, play is fully
+deterministic. Medals grade swaps used (`medals.swap_medal`; `medals` holds the most
+swaps for Silver and Gold), and keys containing `-plate-` rank by fewest swaps
+(`scores.SWAPS_ORDER`). `adventure.experiment_medal` and `saved_medal` choose the rule.
+
+**Solver and generator.** `tools/solve_plate.py` searches swap sequences breadth-first,
+merging identical positions (grid plus symbols), and returns the fewest winning swaps,
+the winning lines of that length, and positions searched. Its generator builds
+gravity-stable plates (columns 5–8 tiles tall, 8 fire, no ready match, a Line and a
+Square on non-fire tiles) and keeps those that cannot be won in 3 swaps, can be won
+within the limit, and cannot be won at all without their symbols. Random plates are
+almost never solvable: with no refill and four-tile runs, the first sparse attempts
+(columns 3–6) offered 1–5 positions in total, and of the denser ones only about 3%
+could be cleared of fire.
+
+**The Red Plate** is generator seed 463, chosen by the player from the first
+candidates (seeds 9, 382, 385, 440, 463). 53 tiles, 8 fire, 13 opening moves. Full tree
+analysis: winning sequences of 5 swaps (2 orderings of the single merged line), 6 (9)
+and 7 (9), against thousands of dead ends; random play wins 36 of 2,000 games (1.8%),
+never in 5. The planned limit of 6 would leave no room for Bronze, so the limit is
+**7: Gold in 5, Silver in 6, Bronze in 7**. A test re-runs the solver on the shipped
+plate (best 5, one line, unsolvable without symbols), so it can never ship unsolvable.

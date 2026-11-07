@@ -11,8 +11,7 @@ import math
 import pygame
 from .board import SIZE
 from .modes import ADVENTURE_MODES
-from .adventure import CAMPAIGN_KITS, CHAPTER, CHAPTER_TITLE, medal_thresholds
-from .medals import efficiency_medal
+from .adventure import CAMPAIGN_KITS, CHAPTER, CHAPTER_TITLE, saved_medal
 
 WIDTH, HEIGHT = 1040, 780
 LEFT, TOP, TILE = 48, 154, 70
@@ -123,6 +122,9 @@ class AdventureView:
     """Adventure: finite material, an objective, and efficiency stats."""
 
     def counter(self, game):
+        if game.experiment.medal_by == 'swaps':
+            silver, gold = game.experiment.medals
+            return (str(game.swaps_remaining), 'SWAPS LEFT', f'Gold in {gold} / Silver in {silver}')
         return (str(game.material_left), 'MATERIAL LEFT',
                 'Silver {}+ / Gold {}+'.format(*game.experiment.medals))
 
@@ -136,6 +138,11 @@ class AdventureView:
             canvas.text(title, (PANEL, 308), 20)
         canvas.text(game.objective_title, (PANEL, 341), 19, GOLD)
         canvas.text(game.objective_progress, (PANEL, 366), 14, MUTED)
+        if game.experiment.layout:
+            canvas.text('A fixed plate: no reserves, no stirs', (PANEL, 390), 14, MUTED)
+            canvas.text(f'Material left: {game.material_left}', (PANEL, 429), 16)
+            canvas.text(f'Swaps: {game.turns} of {game.experiment.swap_limit}', (PANEL, 454), 16)
+            return
         if sum(game.reserves):
             canvas.text('Replacement reserves', (PANEL, 390), 14, MUTED)
         else:
@@ -160,13 +167,17 @@ class AdventureView:
         if game.outcome == 'stalled':
             canvas.text(f'{game.shortfall} / {game.material_left} material left',
                         (122, 452), 16, GOLD)
+        elif game.experiment.medal_by == 'swaps':
+            swaps = 'swap' if game.turns == 1 else 'swaps'
+            canvas.text(f'{game.medal} medal / Solved in {game.turns} {swaps}',
+                        (122, 452), 16, MEDAL_COLORS[game.medal])
         else:
             canvas.text(f'{game.medal} medal / Material left: {game.material_left}',
                         (122, 452), 16, MEDAL_COLORS[game.medal])
         canvas.text(f'Reactants consumed: {game.consumed}', (122, 478), 16)
         canvas.text(f'Successful swaps: {game.turns} / Stirs: {game.stirs}', (122, 504), 16)
         unspent = len(game.unstable)
-        if game.outcome == 'success' and unspent:
+        if game.outcome == 'success' and unspent and not game.experiment.layout:
             canvas.text(f"{unspent} unstable symbol{'s' if unspent != 1 else ''} left unspent "
                         '(counted in material left)', (122, 526), 14, MUTED)
         canvas.text('L: view scores    R: retry experiment', (122, 548), 16)
@@ -185,8 +196,7 @@ class AdventureView:
             canvas.text('-', (440, y), 16, MUTED)
             canvas.text('Efficiency stats unavailable', (108, y+19), 14, MUTED)
         else:
-            thresholds = medal_thresholds(category.mode) if category else medal_thresholds(None)
-            medal = efficiency_medal(entry['material_left'], thresholds)
+            medal = saved_medal(category.mode if category else None, entry['material_left'], entry['swaps'])
             canvas.text(f"{entry['material_left']} / {medal}", (440, y), 16, MEDAL_COLORS[medal])
             canvas.text(f"Swaps: {entry['swaps']} / Stirs: {entry['stirs']}", (108, y+19), 14, MUTED)
 
@@ -373,7 +383,7 @@ def draw_stage_complete(canvas, session):
             medal = session.stage_medals[index] if index < len(session.stage_medals) else None
             canvas.text(f'{kit.stage}: {kit.experiment.title}', (122, 584 + index*22), 14)
             canvas.text(medal or '-', (420, 584 + index*22), 14, MEDAL_COLORS.get(medal, MUTED))
-        canvas.text('More stages are coming.  E: replay a stage', (122, 584 + len(CAMPAIGN_KITS)*22 + 8),
+        canvas.text('More chapters are coming.  E: replay a stage', (122, 584 + len(CAMPAIGN_KITS)*22 + 8),
                     14, MUTED)
 
 
