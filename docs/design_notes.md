@@ -753,3 +753,125 @@ and made the old thresholds easy (Silver for 48 of 60 efficient default-kit runs
 player chose to raise the new revisions to **Silver 40, Gold 50**. Thresholds are now
 per revision (`Experiment.medals`), so earlier wins keep their 30/45 awards.
 
+## Authored kits and campaign: proposed design (2026-11-05)
+
+Agreed in discussion; step 1 is next. Each kit introduces one idea and is named for
+a stage of the magnum opus. Medals keep measuring material left in every kit.
+
+| Stage | Kit | Rule | Teaches | New engine work |
+| --- | --- | --- | --- | --- |
+| Nigredo | *The Dry Flask* | Scarce water reserves (*initial*: 6 instead of 20); points target | Spend the scarce element carefully | None: reserves only |
+| Albedo | *Purification* | Win by removing every earth tile from board and reserves (*initial*: 12 earth in reserve) | Objectives other than points; an earth Element blast is the key play | "Purify" objective |
+| Citrinitas | *The Golden Shape* | Win by forming and detonating an Element symbol before material runs out | Earning and spending unstable symbols | "Detonate" objective |
+| Rubedo | *The Red Plate* | Fixed board, no reserves, two pre-placed unstable symbols; clear all fire within 6 swaps | Multi-move planning | Fixed boards, swap limit, solvability search |
+
+Decisions (player, 2026-11-05):
+
+- **Unlock in order.** Winning a kit opens the next; progress is stored locally in the
+  scoreboard database's `settings` table. The first kit is always open.
+- **One fixed design per kit.** No Easy/Medium/Hard tiers: each kit carries its own stir
+  limit and medal thresholds, tuned as a single puzzle. One scoreboard per kit.
+- **Build order:** (1) kit picker and progression plus *The Dry Flask*; (2) objective
+  system plus *Purification* and *The Golden Shape*; (3) fixed boards plus *The Red
+  Plate*, with a search proving every shipped plate solvable.
+
+Kit picker (*initial*): a campaign entry in the mode cycle; inside it, **E** cycles the
+unlocked kits, and the sidebar shows the kit's name, objective, and progress. A fuller
+"laboratory notebook" screen can follow once there are more kits. Every kit's numbers
+should be calibrated with `tools/measure_adventure.py` before release, as the medal
+thresholds were.
+
+### Campaign step 1 implemented: picker, progress, The Dry Flask (2026-11-05)
+
+`--mode campaign` holds `adventure.CAMPAIGN_KITS`, each a `Kit(stage, experiment, lesson)`
+with its own experiment key (`adventure-kit-…`), so kits rank by efficiency and keep
+separate scoreboards. Progress is the count of open stages in the `settings` table
+(`campaign_unlocked`); it only grows, and a success saved in stage *n* opens stage
+*n*+1. **E** cycles open stages, with the usual abandon confirmation; with one open
+stage it explains how to unlock more. The header shows "Stage n of N".
+
+**The Dry Flask calibration.** Seed 42, unstable symbols on, the calibration tool's
+random and efficient policies. A first sweep (40 runs per policy) of water reserves 4,
+6, 8, 10 against targets 3,000 and 3,500 with 5 stirs showed 3,000 wins almost always
+regardless of scarcity, while 3,500 with scarce water separated skill sharply (8 water:
+random 19/40 wins, efficient 36/40). Finalists, 100 runs per policy:
+
+| Water | Stirs | Policy | Wins | Median material | 30+ | 40+ |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| 8 | 5 | random | 49 | 22 | 11 | 6 |
+| 8 | 5 | efficient | 84 | 29 | 40 | 11 |
+| 8 | 8 | random | 81 | 17 | 11 | 6 |
+| 8 | 8 | efficient | 99 | 25 | 40 | 11 |
+| 10 | 5 | random | 66 | 26 | 31 | 8 |
+| 10 | 5 | efficient | 90 | 26.5 | 38 | 22 |
+| 10 | 8 | random | 94 | 21 | 31 | 8 |
+| 10 | 8 | efficient | 98 | 26 | 38 | 22 |
+
+Chosen for the opening stage: **8 water, 8 stirs, target 3,500, Silver 30 / Gold 40**.
+Careful play nearly always wins, so the stage is approachable, and skill shows in the
+medals (efficient Silver 40%, Gold 11%; random 11%, 6%), matching the intent behind
+Adventure's thresholds. Medals are lower than Adventure's 40/50 because the kit starts
+with 132 tiles, not 144. The 8-water, 5-stir variant (efficient 84% vs random 49% wins)
+is a candidate for a harder later stage.
+
+
+### Campaign step 2 implemented: objectives, Purification, The Golden Shape (2026-11-06)
+
+`Experiment.objective` is `points` (the default; every earlier experiment is unchanged),
+`purify` (remove every tile of `element` from board and reserves), or `detonate`
+(detonate `detonations` unstable symbols of any kind; `Game.detonations` counts them,
+chained detonations included). `Experiment.start_unstable` lists (element, tier)
+symbols placed on random tiles of their element on the opening board. Only the
+objective decides a win; points still score and rank as before. The sidebar shows the
+goal and progress (`objective_title`, `objective_progress`) and a stalled run names
+what was missing (`shortfall`).
+
+**Why the initial designs changed.** The proposed kits both relied on Element symbols.
+Simulating the standard kit with the efficient policy showed Element bursts in only
+0.1 games in 10 (Line 2.3 per game, Square 0.45): Adventure's four-tile runs make L, T
+and plus shapes rare. Purification without help won 10–25% of games, and every loss
+ended with 1–3 earth stranded, unmatchable. The Golden Shape (one Element detonation)
+won 6–15%. The player chose to start Purification with an earth Element symbol (the
+lesson becomes timing the blast) and to make The Golden Shape ask for 3 detonations of
+any kind.
+
+**Calibration.** `tools/measure_adventure.py` now plays toward the objective: for
+purify it prefers removing the element per material spent and holds that element's
+Element blast until its reserve is empty; for detonate it prefers detonating, then
+forming symbols. Fixed seed 42 (the board players get), 100 runs per policy:
+
+| Kit | Variant | Random wins | Efficient wins | Efficient 30+ / 40+ / 50+ | Random 30+ / 40+ / 50+ |
+| --- | --- | ---: | ---: | --- | --- |
+| Purification | 0 earth, 8 stirs | 86 | 85 | 35 / 31 / 22 | 28 / 17 / 11 |
+| Purification | 6 earth, 8 stirs | 63 | 76 | 40 / 30 / 19 | 29 / 20 / 10 |
+| Purification | **12 earth, 8 stirs** | 53 | 70 | 26 / 15 / 2 | 15 / 5 / 0 |
+| Purification | 12 earth, 5 stirs | 45 | 59 | 26 / 15 / 2 | 15 / 5 / 0 |
+| Golden Shape | **12 each, 8 stirs** | 21 | 81 | 51 / 41 / 16 | 3 / 2 / 0 |
+| Golden Shape | 16 each, 8 stirs | 23 | 74 | 38 / 29 / 20 | 3 / 0 / 0 |
+| Golden Shape | 20 each, 8 stirs | 32 | 90 | 62 / 53 / 40 | 3 / 3 / 3 |
+
+Chosen: **Purification** 12 earth, 8 stirs, Silver 30 / Gold 40 (efficient Silver 26%,
+Gold 15%; random 15%, 5%). **The Golden Shape** 12 of each element, 8 stirs, Silver 40 /
+Gold 50 (efficient 41%, 16%; random 2%, 0%): it separates skill most sharply of the
+three stages, and its wins come early, so the medals sit higher. Wins fall from stage
+to stage for random play (81, 53, 21). The run is saved in
+[campaign_calibration.json](campaign_calibration.json) and reproduces with
+`uv run python tools/measure_adventure.py --campaign --runs 100 --seed 42`; its Dry
+Flask figures match the step 1 calibration exactly.
+
+### Campaign progression and chapters (2026-11-06)
+
+Playtesting showed that **E** was not discoverable as the way to move on. The player
+chose: the four Great Work stages are **Chapter 1** (`adventure.CHAPTER`,
+`CHAPTER_TITLE`), with later chapters of three or four stages each to follow.
+
+- A campaign win shows **Stage complete: {stage}** and a box offering **Enter: next
+  stage**; Enter, Space, or a click on the board starts it (`Session.next_kit`,
+  `advance_stage`). **E** still replays any open stage.
+- Winning the last stage shows **Chapter 1 complete** with the best medal of each stage.
+- The header replaces "Stage n of N" with "Chapter 1", a dot per stage (filled in the
+  best medal's colour once won, outlined when open, dim when locked; the current stage
+  ringed), and the E hint. `Session.stage_medals` is recomputed with the scores.
+- Fix: progress is now recorded one past the final stage, so stages added later (The Red
+  Plate) open for players who already finished the chapter. Before, a final-stage win
+  recorded nothing.

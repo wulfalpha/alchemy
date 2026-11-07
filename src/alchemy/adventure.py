@@ -2,9 +2,15 @@
 from collections import Counter
 from dataclasses import dataclass, replace
 
-from .board import Game, SIZE, matches, legal_moves
+from .board import ELEMENT, Game, SIZE, matches, legal_moves
 from .modes import ADVENTURE
 from .medals import efficiency_medal, V1_THRESHOLDS, UNSTABLE_THRESHOLDS
+
+
+# Objectives: reach the points target, remove every tile of one element (`element`, an
+# index into the mode's names) from board and reserves, or detonate `detonations`
+# unstable symbols of any kind.
+POINTS, PURIFY, DETONATE = 'points', 'purify', 'detonate'
 
 
 @dataclass(frozen=True)
@@ -18,6 +24,10 @@ class Experiment:
     stir_limit: int | None = None
     unstable: bool = False   # skilful matches leave unstable symbols (see board.py)
     medals: tuple = V1_THRESHOLDS   # (silver, gold) material left; see medals.py
+    objective: str = POINTS
+    element: int | None = None      # the element a PURIFY objective removes
+    detonations: int = 1            # unstable symbols a DETONATE objective needs
+    start_unstable: tuple = ()      # (element, tier) symbols placed on the opening board
 
 
 # Released definitions stay unchanged so their saved scores keep their meaning.
@@ -37,7 +47,39 @@ EXPERIMENTS = {
     'adventure-5': replace(PREVIOUS_EXPERIMENTS['adventure-5'], key='adventure-5-v2', **_UNSTABLE),
     'adventure-8': replace(PREVIOUS_EXPERIMENTS['adventure-8'], key='adventure-8-v2', **_UNSTABLE),
 }
-_BY_KEY = {e.key: e for e in (*PREVIOUS_EXPERIMENTS.values(), *EXPERIMENTS.values())}
+
+
+@dataclass(frozen=True)
+class Kit:
+    """One stage of the campaign: an authored experiment and the idea it teaches."""
+    stage: str
+    experiment: Experiment
+    lesson: str
+
+
+# Chapter 1 of the campaign: one stage per phase of the Great Work (Rubedo is planned).
+CHAPTER = 'Chapter 1'
+CHAPTER_TITLE = 'The Great Work'
+
+# The campaign, in unlock order. Each kit is one fixed design with its own stir limit and
+# medal thresholds; numbers are calibrated in docs/design_notes.md. Never change a released
+# kit's experiment: give it a new key instead, as for First Transmutation.
+CAMPAIGN_KITS = (
+    Kit('Nigredo', Experiment(key='adventure-kit-dry-flask-v1', title='The Dry Flask', target=3500,
+                              reserves=(20, 8, 20, 20), seed=42, stir_limit=8, unstable=True,
+                              medals=(30, 40)),
+        'Water is scarce, so spend it wisely.'),
+    Kit('Albedo', Experiment(key='adventure-kit-purification-v1', title='Purification', reserves=(20, 20, 20, 12),
+                             seed=42, stir_limit=8, unstable=True, medals=(30, 40), objective=PURIFY,
+                             element=3, start_unstable=((3, ELEMENT),)),
+        'Remove every earth tile. Time the Element blast.'),
+    Kit('Citrinitas', Experiment(key='adventure-kit-golden-shape-v1', title='The Golden Shape',
+                                 reserves=(12, 12, 12, 12), seed=42, stir_limit=8, unstable=True,
+                                 medals=(40, 50), objective=DETONATE, detonations=3),
+        'Form and detonate 3 unstable symbols.'),
+)
+_BY_KEY = {e.key: e for e in (*PREVIOUS_EXPERIMENTS.values(), *EXPERIMENTS.values(),
+                              *(kit.experiment for kit in CAMPAIGN_KITS))}
 
 
 def medal_thresholds(experiment_key):
@@ -177,7 +219,66 @@ class AdventureGame(Game):
         self.turns = 0
         self.stirs = 0
         self.initial_material = SIZE*SIZE + sum(self.reserves)
-        self.message = f'{experiment.title}: reach {experiment.target:,} points.'
+        if experiment.start_unstable:
+            self.unstable = carry_markers(experiment.start_unstable, self.grid, self.rng)
+        self.message = f'{experiment.title}: {self.goal}.'
+
+    @property
+    def element_name(self):
+        return self.mode.names[self.experiment.element]
+
+    @property
+    def element_left(self):
+        """Tiles of the PURIFY element still in the vessel and its reserve."""
+        e = self.experiment.element
+        return self.reserves[e] + sum(v == e for row in self.grid for v in row)
+
+    @property
+    def goal(self):
+        objective = self.experiment.objective
+        if objective == PURIFY:
+            return f'remove every {self.element_name} tile'
+        if objective == DETONATE:
+            return f'detonate {self.experiment.detonations} unstable symbols'
+        return f'reach {self.experiment.target:,} points'
+
+    @property
+    def objective_title(self):
+        objective = self.experiment.objective
+        if objective == PURIFY:
+            return f'Goal: remove all {self.element_name}'
+        if objective == DETONATE:
+            return f'Goal: detonate {self.experiment.detonations} unstable'
+        return f'Target: {self.experiment.target:,} points'
+
+    @property
+    def objective_progress(self):
+        objective = self.experiment.objective
+        if objective == PURIFY:
+            return f'{self.element_left} {self.element_name} left, board and reserve'
+        if objective == DETONATE:
+            done = f'{min(self.detonations, self.experiment.detonations)} of {self.experiment.detonations} detonated'
+            return f'{done}; match a symbol to set it off' if self.unstable else \
+                f'{done}; form symbols with 5+ in a row'
+        return f'{self.points_remaining:,} points to go'
+
+    @property
+    def shortfall(self):
+        objective = self.experiment.objective
+        if objective == PURIFY:
+            return f'{self.element_left} {self.element_name} left'
+        if objective == DETONATE:
+            return f'{self.detonations} of {self.experiment.detonations} detonated'
+        return f'{self.points_remaining:,} points short'
+
+    @property
+    def objective_met(self):
+        objective = self.experiment.objective
+        if objective == PURIFY:
+            return self.element_left == 0
+        if objective == DETONATE:
+            return self.detonations >= self.experiment.detonations
+        return self.score >= self.experiment.target
 
     @property
     def finished(self):
@@ -222,9 +323,13 @@ class AdventureGame(Game):
     def _settle(self, events):
         if self.pending:
             return
-        if self.score >= self.experiment.target:
+        if self.objective_met:
             self.outcome = 'success'
             self.message = 'Experiment complete: target reached!'
+            if self.experiment.objective == PURIFY:
+                self.message = f'Experiment complete: the vessel is free of {self.element_name}!'
+            elif self.experiment.objective == DETONATE:
+                self.message = 'Experiment complete: the symbols are spent!'
         elif not legal_moves(self.grid, self.mode):
             markers = [(self.grid[y][x], tier) for (x, y), tier in sorted(self.unstable.items())]
             counts = Counter(v for row in self.grid for v in row if v is not None)
@@ -243,6 +348,6 @@ class AdventureGame(Game):
                 self.outcome = 'stalled'
                 self.failure_reason = 'search_exhausted'
             if self.outcome == 'stalled':
-                self.message = f'{self.failure_summary} {self.points_remaining:,} points short.'
+                self.message = f'{self.failure_summary} {self.shortfall}.'
         if self.finished:
             events.append('game_over')

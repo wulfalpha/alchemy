@@ -140,6 +140,29 @@ class Scoreboard:
             except sqlite3.Error as error:
                 self._failed(error)
 
+    def campaign_unlocked(self):
+        """How many campaign stages are open, counting from the first (always at least 1)."""
+        if self.connection is None:
+            return 1
+        try:
+            row = self.connection.execute("SELECT value FROM settings WHERE key='campaign_unlocked'").fetchone()
+            return max(1, int(row[0])) if row and row[0].isdigit() else 1
+        except sqlite3.Error as error:
+            self._failed(error)
+            return 1
+
+    def unlock_campaign(self, count):
+        """Open the first `count` stages; never closes any. Returns whether it opened a new one."""
+        if self.connection is None or count <= self.campaign_unlocked():
+            return False
+        try:
+            with self.connection:
+                self.connection.execute("INSERT OR REPLACE INTO settings VALUES ('campaign_unlocked', ?)", (str(count),))
+            return True
+        except sqlite3.Error as error:
+            self._failed(error)
+            return False
+
     def player(self):
         if self.connection is None:
             return 'Alchemist'

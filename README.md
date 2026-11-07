@@ -47,7 +47,7 @@ Or install into your Python environment with `python -m pip install -e .`, then 
 
 ## Game modes
 
-Six modes are available. Press **C** to switch, or start in one with
+Seven modes are available. Press **C** to switch, or start in one with
 `alchemy --mode <key>`. Switching begins a new experiment, and each mode keeps its own
 high-score ranking.
 
@@ -59,6 +59,7 @@ high-score ranking.
 | `adventure-5` | Adventure Medium (5 stirs) | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
 | `adventure-8` | Adventure Easy (8 stirs) | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
 | `diagonal-30` | Diagonal | the four elements plus sun | any touching symbol, diagonals included | rows, columns, and both diagonals |
+| `campaign` | Campaign | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
 
 **Classic** is the primary mode. Four elements for a match-four game keeps about 4.5 legal
 swaps available per turn. **Diagonal** adds the sun as a fifth element but lets you swap
@@ -142,6 +143,35 @@ two differences that follow from finite material:
   well-timed detonation helps your medal, while a careless one wastes reactants. A newly
   formed unstable symbol keeps its tile, so forming one costs no material.
 
+### Campaign: the Great Work
+
+`uv run alchemy --mode campaign`, or press **C** until the mode reads Campaign. The
+campaign is a sequence of hand-designed Adventure experiments, one for each stage of
+the alchemists' Great Work. Each stage teaches one idea, has a single fixed design with
+its own stir limit and medal thresholds, and keeps its own efficiency scoreboard.
+
+| Stage | Experiment | Goal | Kit | Stirs | Silver / Gold |
+| --- | --- | --- | --- | --- | --- |
+| 1. Nigredo | The Dry Flask | Reach 3,500 points | Reserves of 20 fire, **8 water**, 20 air, 20 earth | 8 | 30 / 40 |
+| 2. Albedo | Purification | Remove every earth tile from the board and reserves | Reserves of 20 fire, 20 water, 20 air, **12 earth**; starts with an **earth Element symbol** | 8 | 30 / 40 |
+| 3. Citrinitas | The Golden Shape | Detonate 3 unstable symbols of any kind | Reserves of **12** of each element | 8 | 40 / 50 |
+
+Every stage starts with 64 tiles on the board. Points still score and appear on the
+scoreboard, but only the goal decides a win. Purification's Element symbol clears every
+earth tile on the board when it detonates, so it pays to wait until the earth reserve
+is spent: earth left stranded in ones, twos and threes can never be matched. The
+sidebar shows the goal and your progress toward it.
+
+These stages form **Chapter 1: The Great Work**; a fourth stage, Rubedo, is planned,
+and later chapters will add more. Stages unlock in order and your progress is saved
+locally with your scores. Winning a stage shows **Stage complete**: press **Enter** (or
+click the board) to begin the next one. Finishing the last stage shows **Chapter 1
+complete** with your best medal for each stage. The header shows one dot per stage,
+filled with the colour of your best medal once won, with the current stage ringed. Press
+**E** at any time to replay an open stage for a better medal (it asks before abandoning
+a game in progress). The campaign opens on the newest stage you have reached. Unstable
+symbols work as in [Adventure](#unstable-symbols-in-adventure).
+
 ### Adventure efficiency medals
 
 Reach the 3,500-point target to earn a medal based on **material left after the
@@ -153,7 +183,8 @@ entire final cascade** (board tiles plus reserves):
 | Silver | 40–49 |
 | Gold | 50 or more |
 
-These thresholds apply to Easy, Medium, Hard, and unlimited Adventure. They were
+These thresholds apply to Easy, Medium, Hard, and unlimited Adventure; each campaign
+stage sets its own (see [Campaign](#campaign-the-great-work)). They were
 raised with unstable symbols, which make efficient play much stronger; wins from
 earlier revisions keep their original thresholds (Silver 30, Gold 45) and medals. Stirs and
 swaps do not change the medal; each difficulty keeps its separate ranking.

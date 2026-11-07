@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Campaign
+- **New Campaign mode** (`--mode campaign`, or **C**): hand-designed Adventure
+  experiments, one per stage of the Great Work, unlocked in order. Winning a stage
+  opens the next; progress is saved locally. **E** switches between open stages.
+- **Stage 1, Nigredo: The Dry Flask.** Only 8 water in reserve. Reach 3,500 points with
+  up to 8 stirs; Silver at 30 material left, Gold at 40.
+- **Stage 2, Albedo: Purification.** Win by removing every earth tile from the board
+  and reserves (12 earth in reserve). The board starts with an earth Element symbol:
+  save its blast until the earth reserve is spent. 8 stirs; Silver 30, Gold 40.
+- **Stage 3, Citrinitas: The Golden Shape.** Win by detonating 3 unstable symbols of
+  any kind, with reserves of 12 of each element. 8 stirs; Silver 40, Gold 50.
+- Campaign experiments can have goals other than points; the sidebar and end screen
+  show the goal and your progress.
+- **Progression.** The three stages form Chapter 1: The Great Work. Winning a stage
+  shows **Stage complete** and **Enter** (or a click) begins the next; the last stage
+  shows **Chapter 1 complete** with your best medal per stage. The header shows a dot
+  per stage in its best medal's colour. **E** replays any open stage.
+
 ## 0.1.10
 
 ### Classic

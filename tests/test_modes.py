@@ -29,7 +29,8 @@ def dead_grid(mode):
 def test_registry_is_keyed_consistently_and_defaults_to_classic():
     assert all(key == mode.key for key, mode in MODES.items())
     assert DEFAULT_KEY == CLASSIC.key == 'classic-30'
-    assert set(MODES) == {'classic-30', 'diagonal-30', 'adventure', 'adventure-3', 'adventure-5', 'adventure-8'}  # five-element play is retired
+    assert set(MODES) == {'classic-30', 'diagonal-30', 'adventure', 'adventure-3', 'adventure-5', 'adventure-8',
+                          'campaign'}  # five-element play is retired
 
 
 @pytest.mark.parametrize('key', sorted(MODES))

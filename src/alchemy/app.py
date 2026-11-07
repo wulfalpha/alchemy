@@ -7,11 +7,12 @@ from pathlib import Path
 os.environ.setdefault('PYGAME_HIDE_SUPPORT_PROMPT', '1')
 import pygame
 from .board import Game, SIZE, adjacent
-from .adventure import AdventureGame, EXPERIMENTS
+from .adventure import AdventureGame, EXPERIMENTS, CAMPAIGN_KITS, CHAPTER
+from .medals import efficiency_medal
 from .resources import load_symbols
 from .audio import Audio
 from .scores import Scoreboard, score_categories
-from .modes import MODES, MODE_ALIASES, DEFAULT_KEY
+from .modes import MODES, MODE_ALIASES, DEFAULT_KEY, CAMPAIGN
 from .motion import Motion
 from .render import (WIDTH, HEIGHT, LEFT, TOP, TILE, BG, PLAYER_BUTTON, HINT_BUTTON,
                      SCORES_BUTTON, RESTART_BUTTON, Canvas, draw)
@@ -105,15 +106,36 @@ class Session:
         self.category_index = 0
         self.score_saved = self.show_scores = False
         self.results = []
+        self.stage_medals = []   # best medal per campaign stage, refreshed with the scores
         self.selected = self.hint = None
-        self.confirming = None   # 'restart' or 'mode' while asking to abandon a game
+        self.confirming = None   # 'restart', 'mode', or 'kit' while asking to abandon a game
         self.cursor = None       # keyboard cell; appears with the first arrow key
         self.running = True
+        self.kit_index = self.unlocked_kits() - 1   # the newest open campaign stage
         self.start_new_game(animate=not args.smoke_test)
 
     @property
     def adventure(self):
-        return self.mode.key in EXPERIMENTS
+        return self.mode.key in EXPERIMENTS or self.campaign
+
+    @property
+    def campaign(self):
+        return self.mode.key == CAMPAIGN.key
+
+    @property
+    def kit(self):
+        return CAMPAIGN_KITS[self.kit_index] if self.campaign else None
+
+    def unlocked_kits(self):
+        return min(self.scores.campaign_unlocked(), len(CAMPAIGN_KITS))
+
+    def experiment(self):
+        return self.kit.experiment if self.campaign else EXPERIMENTS[self.mode.key]
+
+    def tagline(self):
+        if not self.campaign:
+            return self.mode.tagline
+        return f'{CHAPTER}: stage {self.kit_index + 1} of {len(CAMPAIGN_KITS)}'
 
     def score_seed(self):
         return self.game.seed if isinstance(self.game, AdventureGame) else self.args.seed
@@ -122,16 +144,49 @@ class Session:
         return self.game.experiment.key if self.adventure else self.mode.key
 
     def categories(self):
-        return score_categories(self.score_mode(), self.mode.label, self.mode.rules)
+        label = f'{self.kit.stage}: {self.kit.experiment.title}' if self.campaign else self.mode.label
+        return score_categories(self.score_mode(), label, self.mode.rules)
 
     def reload_scores(self):
         category = self.categories()[self.category_index]
         self.results = self.scores.top(self.score_seed(), mode=category.mode, rules=category.rules)
+        self.stage_medals = [self.best_medal(kit) for kit in CAMPAIGN_KITS] if self.campaign else []
+
+    def best_medal(self, kit):
+        """The medal of the best saved win of a campaign stage, or None."""
+        experiment = kit.experiment
+        seed = experiment.seed if self.args.seed is None else self.args.seed
+        best = self.scores.top(seed, mode=experiment.key, rules=self.mode.rules)
+        return efficiency_medal(best[0]['material_left'], experiment.medals) if best else None
+
+    @property
+    def stage_won(self):
+        """A campaign stage has just been won and its end screen is showing."""
+        return self.campaign and self.game_over_visible() and self.game.outcome == 'success'
+
+    @property
+    def next_kit(self):
+        """The open stage after a just-won one, which Enter begins."""
+        following = self.kit_index + 1
+        if self.stage_won and following < self.unlocked_kits():
+            return CAMPAIGN_KITS[following]
+        return None
+
+    @property
+    def chapter_complete(self):
+        return self.stage_won and self.kit_index == len(CAMPAIGN_KITS) - 1
+
+    def advance_stage(self):
+        self.kit_index += 1
+        self.start_new_game()
+        self.audio.play('restart')
 
     def start_new_game(self, animate=True):
         """Begin a fresh experiment in the current mode. Also used by the mode switch."""
-        self.game = (AdventureGame(self.args.seed, experiment=EXPERIMENTS[self.mode.key])
+        self.game = (AdventureGame(self.args.seed, experiment=self.experiment())
                      if self.adventure else Game(self.args.seed, self.mode))
+        if self.campaign:
+            self.game.message = f'{self.kit.stage}: {self.kit.lesson}'
         self.game.message = f'{self.game.message}  /  {KEYBOARD_TIP}'  # until the first move replaces it
         self.run_id = str(uuid4())
         self.score_saved = self.show_scores = False
@@ -153,6 +208,12 @@ class Session:
         pygame.display.set_caption(self.mode.caption)
         self.symbols = load_symbols(self.args.assets_dir, self.mode.names)
         self.start_new_game()
+
+    def cycle_kit(self):
+        """Move to the next open campaign stage (wrapping to the first)."""
+        self.kit_index = (self.kit_index + 1) % self.unlocked_kits()
+        self.start_new_game()
+        self.audio.play('restart')
 
     def cycle_mode(self):
         keys = list(MODES)
@@ -241,6 +302,8 @@ class Session:
                 self.running = False
         elif event.key in ARROWS:
             self.move_cursor(*ARROWS[event.key])
+        elif event.key in ACTIVATE and self.next_kit and not self.show_scores:
+            self.advance_stage()
         elif event.key in ACTIVATE and self.cursor is not None and self.can_act():
             self.press_cell(self.cursor)
         elif event.key == pygame.K_a:
@@ -256,6 +319,11 @@ class Session:
             self.toggle_scores()
         elif event.key == pygame.K_c:
             self.confirm('mode', confirming, self.cycle_mode)
+        elif event.key == pygame.K_e and self.campaign:
+            if self.unlocked_kits() > 1:
+                self.confirm('kit', confirming, self.cycle_kit)
+            else:
+                self.game.message = 'Win this stage to unlock the next.'
         elif event.key == pygame.K_m:
             self.audio.toggle()
         elif event.key == pygame.K_r:
@@ -274,6 +342,9 @@ class Session:
             self.confirm('restart', confirming, self.restart)
         elif HINT_BUTTON.collidepoint(pos) and self.can_act():
             self.show_hint()
+        elif self.next_kit and not self.show_scores and LEFT <= pos[0] < LEFT + SIZE*TILE \
+                and TOP <= pos[1] < TOP + SIZE*TILE:
+            self.advance_stage()
         elif self.can_act():
             x = int((pos[0] - LEFT) // TILE)
             y = int((pos[1] - TOP) // TILE)
@@ -348,6 +419,10 @@ class Session:
                  if self.adventure else {})
         self.score_saved = self.scores.record(self.run_id, self.player, self.game.score, self.score_seed(),
                                               mode=self.score_mode(), rules=self.mode.rules, **stats)
+        following = self.kit_index + 1
+        # Record progress even past the last stage, so stages added later open for finishers.
+        if self.campaign and self.scores.unlock_campaign(following + 1) and following < len(CAMPAIGN_KITS):
+            self.game.message = f'{CAMPAIGN_KITS[following].stage} unlocked!  Press Enter to begin it.'
         self.reload_scores()
 
 

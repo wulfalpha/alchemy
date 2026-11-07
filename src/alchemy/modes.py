@@ -111,7 +111,9 @@ ADVENTURE_5 = replace(ADVENTURE, key='adventure-5', label='Adventure / Medium',
 ADVENTURE_8 = replace(ADVENTURE, key='adventure-8', label='Adventure / Easy',
                       caption='Alchemy | Adventure / Easy', tagline='One experiment. Eight stirs.',
                       practice=ADVENTURE.practice[:3] + ('Up to 8 automatic stirs per run.', ADVENTURE.practice[4]))
-ADVENTURE_MODES = (ADVENTURE, ADVENTURE_3, ADVENTURE_5, ADVENTURE_8)
+CAMPAIGN = replace(ADVENTURE, key='campaign', label='Campaign', caption='Alchemy | The Great Work',
+                   tagline='The Great Work, stage by stage.')
+ADVENTURE_MODES = (ADVENTURE, ADVENTURE_3, ADVENTURE_5, ADVENTURE_8, CAMPAIGN)
 MODES = {mode.key: mode for mode in (CLASSIC, DIAGONALS, *ADVENTURE_MODES)}
 # Earlier --mode names that still work. 0.1.5 and 0.1.6 named Adventure after its
 # first experiment revision; its scores keep that key either way.
