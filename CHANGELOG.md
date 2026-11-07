@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.12
 
 ### Campaign
 - **Undo on fixed plates.** Press **U** on The Red Plate to take back the last swap,
