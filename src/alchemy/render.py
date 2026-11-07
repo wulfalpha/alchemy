@@ -40,7 +40,8 @@ SANS, SERIF, NUMERALS = 'SourceSans3-Regular.ttf', 'CormorantGaramond-SemiBold.o
 FONTS = {14: (SANS, 15), 16: (SANS, 17), 19: (SANS, 21),
          24: (SERIF, 29), 38: (NUMERALS, 46), 48: (NUMERALS, 58)}
 CONFIRM_PROMPTS = {'restart': 'Abandon this experiment? Press R or New game again.',
-                   'mode': 'Abandon this experiment and switch mode? Press C again.'}
+                   'mode': 'Abandon this experiment and switch mode? Press C again.',
+                   'kit': 'Abandon this experiment and switch stage? Press E again.'}
 
 
 class Canvas:
@@ -126,7 +127,8 @@ class AdventureView:
 
     def panel(self, canvas, session):
         game = session.game
-        canvas.text(game.experiment.title, (662, 305), 24)
+        kit = getattr(session, 'kit', None)
+        canvas.text(f'{kit.stage}: {game.experiment.title}' if kit else game.experiment.title, (662, 305), 24)
         canvas.text(f'Target: {game.experiment.target:,} points', (PANEL, 341), 19, GOLD)
         canvas.text(f'{game.points_remaining:,} points to go', (PANEL, 366), 14, MUTED)
         if sum(game.reserves):
@@ -216,7 +218,7 @@ def draw_header(canvas, session):
     canvas.text('T H E   F O U R F O L D   A R T', (50, 85), 14, GOLD)
     pygame.draw.rect(screen, SURFACE, PLAYER_BUTTON, border_radius=8)
     canvas.text(f'Player: {session.player}  [P]', (670, 35), 14, GOLD)
-    canvas.text(session.mode.tagline, (PANEL, 67), 16, MUTED)
+    canvas.text(session.tagline(), (PANEL, 67), 16, MUTED)
     canvas.text(f'Mode: {session.mode.label}  [C]', (PANEL, 92), 14, GOLD)
     pygame.draw.line(screen, RULE, (48, 125), (982, 125))
 

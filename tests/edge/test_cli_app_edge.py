@@ -297,7 +297,8 @@ def test_mode_key_cycles_and_starts_a_new_game():
     keys = [g.experiment.key if isinstance(g, AdventureGame) else g.mode.key
             for g in st['games']]
     assert keys == ['classic-30', 'diagonal-30', 'adventure-first-v3',
-                    'adventure-3-v2', 'adventure-5-v2', 'adventure-8-v2', 'classic-30']
+                    'adventure-3-v2', 'adventure-5-v2', 'adventure-8-v2', 'adventure-kit-dry-flask-v1',
+                    'classic-30']
 
 
 def test_completed_game_saved_once_after_last_cascade(tmp_path):
@@ -461,7 +462,7 @@ def test_adventure_mode_name_and_old_alias_both_start_adventure(name):
 
 def test_mode_help_lists_only_current_names():
     r = run('--help')
-    assert '{adventure,adventure-3,adventure-5,adventure-8,classic-30,diagonal-30}' in r.stdout and 'first-v1' not in r.stdout
+    assert '{adventure,adventure-3,adventure-5,adventure-8,campaign,classic-30,diagonal-30}' in r.stdout and 'first-v1' not in r.stdout
     assert run('--smoke-test', '--mode', 'adventure-first-v1').returncode == 0
     bad = run('--mode', 'adventure-first-v9')
     assert bad.returncode == 2 and "invalid choice: 'adventure-first-v9'" in bad.stderr

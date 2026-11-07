@@ -7,11 +7,11 @@ from pathlib import Path
 os.environ.setdefault('PYGAME_HIDE_SUPPORT_PROMPT', '1')
 import pygame
 from .board import Game, SIZE, adjacent
-from .adventure import AdventureGame, EXPERIMENTS
+from .adventure import AdventureGame, EXPERIMENTS, CAMPAIGN_KITS
 from .resources import load_symbols
 from .audio import Audio
 from .scores import Scoreboard, score_categories
-from .modes import MODES, MODE_ALIASES, DEFAULT_KEY
+from .modes import MODES, MODE_ALIASES, DEFAULT_KEY, CAMPAIGN
 from .motion import Motion
 from .render import (WIDTH, HEIGHT, LEFT, TOP, TILE, BG, PLAYER_BUTTON, HINT_BUTTON,
                      SCORES_BUTTON, RESTART_BUTTON, Canvas, draw)
@@ -106,14 +106,34 @@ class Session:
         self.score_saved = self.show_scores = False
         self.results = []
         self.selected = self.hint = None
-        self.confirming = None   # 'restart' or 'mode' while asking to abandon a game
+        self.confirming = None   # 'restart', 'mode', or 'kit' while asking to abandon a game
         self.cursor = None       # keyboard cell; appears with the first arrow key
         self.running = True
+        self.kit_index = self.unlocked_kits() - 1   # the newest open campaign stage
         self.start_new_game(animate=not args.smoke_test)
 
     @property
     def adventure(self):
-        return self.mode.key in EXPERIMENTS
+        return self.mode.key in EXPERIMENTS or self.campaign
+
+    @property
+    def campaign(self):
+        return self.mode.key == CAMPAIGN.key
+
+    @property
+    def kit(self):
+        return CAMPAIGN_KITS[self.kit_index] if self.campaign else None
+
+    def unlocked_kits(self):
+        return min(self.scores.campaign_unlocked(), len(CAMPAIGN_KITS))
+
+    def experiment(self):
+        return self.kit.experiment if self.campaign else EXPERIMENTS[self.mode.key]
+
+    def tagline(self):
+        if not self.campaign:
+            return self.mode.tagline
+        return f'Stage {self.kit_index + 1} of {len(CAMPAIGN_KITS)}  /  E: switch stage'
 
     def score_seed(self):
         return self.game.seed if isinstance(self.game, AdventureGame) else self.args.seed
@@ -122,7 +142,8 @@ class Session:
         return self.game.experiment.key if self.adventure else self.mode.key
 
     def categories(self):
-        return score_categories(self.score_mode(), self.mode.label, self.mode.rules)
+        label = f'{self.kit.stage}: {self.kit.experiment.title}' if self.campaign else self.mode.label
+        return score_categories(self.score_mode(), label, self.mode.rules)
 
     def reload_scores(self):
         category = self.categories()[self.category_index]
@@ -130,8 +151,10 @@ class Session:
 
     def start_new_game(self, animate=True):
         """Begin a fresh experiment in the current mode. Also used by the mode switch."""
-        self.game = (AdventureGame(self.args.seed, experiment=EXPERIMENTS[self.mode.key])
+        self.game = (AdventureGame(self.args.seed, experiment=self.experiment())
                      if self.adventure else Game(self.args.seed, self.mode))
+        if self.campaign:
+            self.game.message = f'{self.kit.stage}: {self.kit.lesson}'
         self.game.message = f'{self.game.message}  /  {KEYBOARD_TIP}'  # until the first move replaces it
         self.run_id = str(uuid4())
         self.score_saved = self.show_scores = False
@@ -153,6 +176,12 @@ class Session:
         pygame.display.set_caption(self.mode.caption)
         self.symbols = load_symbols(self.args.assets_dir, self.mode.names)
         self.start_new_game()
+
+    def cycle_kit(self):
+        """Move to the next open campaign stage (wrapping to the first)."""
+        self.kit_index = (self.kit_index + 1) % self.unlocked_kits()
+        self.start_new_game()
+        self.audio.play('restart')
 
     def cycle_mode(self):
         keys = list(MODES)
@@ -256,6 +285,11 @@ class Session:
             self.toggle_scores()
         elif event.key == pygame.K_c:
             self.confirm('mode', confirming, self.cycle_mode)
+        elif event.key == pygame.K_e and self.campaign:
+            if self.unlocked_kits() > 1:
+                self.confirm('kit', confirming, self.cycle_kit)
+            else:
+                self.game.message = 'Win this stage to unlock the next.'
         elif event.key == pygame.K_m:
             self.audio.toggle()
         elif event.key == pygame.K_r:
@@ -348,6 +382,9 @@ class Session:
                  if self.adventure else {})
         self.score_saved = self.scores.record(self.run_id, self.player, self.game.score, self.score_seed(),
                                               mode=self.score_mode(), rules=self.mode.rules, **stats)
+        following = self.kit_index + 1
+        if self.campaign and following < len(CAMPAIGN_KITS) and self.scores.unlock_campaign(following + 1):
+            self.game.message = f'{CAMPAIGN_KITS[following].stage} unlocked!  Press E to continue.'
         self.reload_scores()
 
 

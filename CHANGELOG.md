@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Campaign
+- **New Campaign mode** (`--mode campaign`, or **C**): hand-designed Adventure
+  experiments, one per stage of the Great Work, unlocked in order. Winning a stage
+  opens the next; progress is saved locally. **E** switches between open stages.
+- **Stage 1, Nigredo: The Dry Flask.** Only 8 water in reserve. Reach 3,500 points with
+  up to 8 stirs; Silver at 30 material left, Gold at 40.
+
 ## 0.1.10
 
 ### Classic

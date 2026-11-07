@@ -781,3 +781,36 @@ unlocked kits, and the sidebar shows the kit's name, objective, and progress. A 
 should be calibrated with `tools/measure_adventure.py` before release, as the medal
 thresholds were.
 
+### Campaign step 1 implemented: picker, progress, The Dry Flask (2026-11-05)
+
+`--mode campaign` holds `adventure.CAMPAIGN_KITS`, each a `Kit(stage, experiment, lesson)`
+with its own experiment key (`adventure-kit-…`), so kits rank by efficiency and keep
+separate scoreboards. Progress is the count of open stages in the `settings` table
+(`campaign_unlocked`); it only grows, and a success saved in stage *n* opens stage
+*n*+1. **E** cycles open stages, with the usual abandon confirmation; with one open
+stage it explains how to unlock more. The header shows "Stage n of N".
+
+**The Dry Flask calibration.** Seed 42, unstable symbols on, the calibration tool's
+random and efficient policies. A first sweep (40 runs per policy) of water reserves 4,
+6, 8, 10 against targets 3,000 and 3,500 with 5 stirs showed 3,000 wins almost always
+regardless of scarcity, while 3,500 with scarce water separated skill sharply (8 water:
+random 19/40 wins, efficient 36/40). Finalists, 100 runs per policy:
+
+| Water | Stirs | Policy | Wins | Median material | 30+ | 40+ |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| 8 | 5 | random | 49 | 22 | 11 | 6 |
+| 8 | 5 | efficient | 84 | 29 | 40 | 11 |
+| 8 | 8 | random | 81 | 17 | 11 | 6 |
+| 8 | 8 | efficient | 99 | 25 | 40 | 11 |
+| 10 | 5 | random | 66 | 26 | 31 | 8 |
+| 10 | 5 | efficient | 90 | 26.5 | 38 | 22 |
+| 10 | 8 | random | 94 | 21 | 31 | 8 |
+| 10 | 8 | efficient | 98 | 26 | 38 | 22 |
+
+Chosen for the opening stage: **8 water, 8 stirs, target 3,500, Silver 30 / Gold 40**.
+Careful play nearly always wins, so the stage is approachable, and skill shows in the
+medals (efficient Silver 40%, Gold 11%; random 11%, 6%), matching the intent behind
+Adventure's thresholds. Medals are lower than Adventure's 40/50 because the kit starts
+with 132 tiles, not 144. The 8-water, 5-stir variant (efficient 84% vs random 49% wins)
+is a candidate for a harder later stage.
+

@@ -37,7 +37,27 @@ EXPERIMENTS = {
     'adventure-5': replace(PREVIOUS_EXPERIMENTS['adventure-5'], key='adventure-5-v2', **_UNSTABLE),
     'adventure-8': replace(PREVIOUS_EXPERIMENTS['adventure-8'], key='adventure-8-v2', **_UNSTABLE),
 }
-_BY_KEY = {e.key: e for e in (*PREVIOUS_EXPERIMENTS.values(), *EXPERIMENTS.values())}
+
+
+@dataclass(frozen=True)
+class Kit:
+    """One stage of the campaign: an authored experiment and the idea it teaches."""
+    stage: str
+    experiment: Experiment
+    lesson: str
+
+
+# The campaign, in unlock order. Each kit is one fixed design with its own stir limit and
+# medal thresholds; numbers are calibrated in docs/design_notes.md. Never change a released
+# kit's experiment: give it a new key instead, as for First Transmutation.
+CAMPAIGN_KITS = (
+    Kit('Nigredo', Experiment(key='adventure-kit-dry-flask-v1', title='The Dry Flask', target=3500,
+                              reserves=(20, 8, 20, 20), seed=42, stir_limit=8, unstable=True,
+                              medals=(30, 40)),
+        'Water is scarce, so spend it wisely.'),
+)
+_BY_KEY = {e.key: e for e in (*PREVIOUS_EXPERIMENTS.values(), *EXPERIMENTS.values(),
+                              *(kit.experiment for kit in CAMPAIGN_KITS))}
 
 
 def medal_thresholds(experiment_key):

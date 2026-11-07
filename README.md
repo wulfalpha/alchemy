@@ -47,7 +47,7 @@ Or install into your Python environment with `python -m pip install -e .`, then 
 
 ## Game modes
 
-Six modes are available. Press **C** to switch, or start in one with
+Seven modes are available. Press **C** to switch, or start in one with
 `alchemy --mode <key>`. Switching begins a new experiment, and each mode keeps its own
 high-score ranking.
 
@@ -59,6 +59,7 @@ high-score ranking.
 | `adventure-5` | Adventure Medium (5 stirs) | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
 | `adventure-8` | Adventure Easy (8 stirs) | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
 | `diagonal-30` | Diagonal | the four elements plus sun | any touching symbol, diagonals included | rows, columns, and both diagonals |
+| `campaign` | Campaign | fire, water, air, earth | horizontal and vertical neighbors | rows and columns |
 
 **Classic** is the primary mode. Four elements for a match-four game keeps about 4.5 legal
 swaps available per turn. **Diagonal** adds the sun as a fifth element but lets you swap
@@ -142,6 +143,23 @@ two differences that follow from finite material:
   well-timed detonation helps your medal, while a careless one wastes reactants. A newly
   formed unstable symbol keeps its tile, so forming one costs no material.
 
+### Campaign: the Great Work
+
+`uv run alchemy --mode campaign`, or press **C** until the mode reads Campaign. The
+campaign is a sequence of hand-designed Adventure experiments, one for each stage of
+the alchemists' Great Work. Each stage teaches one idea, has a single fixed design with
+its own stir limit and medal thresholds, and keeps its own efficiency scoreboard.
+
+| Stage | Experiment | Kit | Target | Stirs | Silver / Gold |
+| --- | --- | --- | --- | --- | --- |
+| 1. Nigredo | The Dry Flask | 64 starting tiles; reserves of 20 fire, **8 water**, 20 air, 20 earth | 3,500 | 8 | 30 / 40 |
+
+Stages unlock in order: winning a stage opens the next, and your progress is saved
+locally with your scores. Press **E** to switch between open stages (it asks before
+abandoning a game in progress). The campaign opens on the newest stage you have
+reached. Unstable symbols work as in [Adventure](#unstable-symbols-in-adventure).
+More stages are planned.
+
 ### Adventure efficiency medals
 
 Reach the 3,500-point target to earn a medal based on **material left after the
@@ -153,7 +171,8 @@ entire final cascade** (board tiles plus reserves):
 | Silver | 40–49 |
 | Gold | 50 or more |
 
-These thresholds apply to Easy, Medium, Hard, and unlimited Adventure. They were
+These thresholds apply to Easy, Medium, Hard, and unlimited Adventure; each campaign
+stage sets its own (see [Campaign](#campaign-the-great-work)). They were
 raised with unstable symbols, which make efficient play much stronger; wins from
 earlier revisions keep their original thresholds (Silver 30, Gold 45) and medals. Stirs and
 swaps do not change the medal; each difficulty keeps its separate ranking.
