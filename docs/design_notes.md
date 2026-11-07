@@ -1030,7 +1030,7 @@ new `DISSOLVE` objective wins when no salt is left.
 20 of each element, 8 stirs, water dissolves. 200 runs per policy on seed 42:
 
 | Salt | Policy | Wins | Wins with 30+ / 40+ / 50+ / 60+ / 70+ |
-| --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | **6** | random | 81 | 34 / 22 / 18 / 13 / 10 |
 | **6** | efficient | **117** | 70 / **59** / 53 / 41 / **28** |
 | 7 | random / efficient | 65 / 86 | efficient: 37 / 26 / 21 / 15 / 9 |
