@@ -937,10 +937,10 @@ Open questions, to settle when each stage is built:
 - **Multi-chapter display.** The header dots and the Chapter complete screen assume one
   chapter. Proposed: chapters are a list of stage groups. The header shows the current
   chapter's dots, and winning Chapter 1's last stage leads into Chapter 2 with Enter.
-- **How salt behaves.** Proposed: salt holds its cell (no gravity) and tiles fall through
-  the column around it is not possible, so the cells below a salt tile refill only from
-  the sides; or salt falls like any tile but can't be swapped or matched and is destroyed
-  only by unstable blasts. To decide with a prototype.
+- **How salt behaves.** Two options, to decide with a prototype: (a) salt holds its cell
+  with no gravity, so tiles above it stay above and the cells below refill only through
+  cascades from beside it; or (b) salt falls like any tile but can't be swapped or
+  matched, and only an unstable blast destroys it.
 - **Sulfur's points target and Silver threshold**, calibrated with stirs used and unused.
 
 Build order (*initial*): (1) multi-chapter structure plus Sulfur; (2) Mercury; (3) Salt;
